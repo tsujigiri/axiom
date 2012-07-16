@@ -1,6 +1,6 @@
 # Axiom
 
-Axiom aims at being a lightweight web framework. It is inspired by
+Axiom is a lightweight web framework, inspired by
 [Sinatra](http://sinatrarb.com) and built on top of
 [Cowboy](https://github.com/extend/cowboy).
 
@@ -51,7 +51,7 @@ don't need to specify every one of them:
 -record(response, {status = 200, headers = [{'Content-Type', "text/html"}], body = <<"">>}).
 ```
 
-The other way to specify the response is to but the above params into a
+The other way to specify the response is to put the above params into a
 proplist:
 
 ```erlang
