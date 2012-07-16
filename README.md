@@ -61,6 +61,20 @@ proplist:
 Again, you don't need to specify all of them, sane defaults also apply
 to the proplist-way.
 
+## Configuration
+
+`axiom:start/1` has a bigger brother called `axiom:start/2`, taking a
+proplist as the second argument. Possible properties and their defaults
+are as follows:
+
+```erlang
+[
+	{nb_acceptors: 100},	% acceptor pool size
+	{host, '_'},		% host IP
+	{port, 7654}		% host port
+]
+```
+
 ## Installation
 
 To use it in your OTP application, add this to your `rebar.config`:
