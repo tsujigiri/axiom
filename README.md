@@ -102,4 +102,4 @@ it already is.
 
 ## License
 
-Please take a look at the `LICENSE` file! (tl;dl: it's the MIT License)
+Please take a look at the `LICENSE` file! (tl;dr: it's the MIT License)
