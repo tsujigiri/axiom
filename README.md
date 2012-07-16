@@ -79,5 +79,13 @@ rebar get-deps
 rebar compile
 ```
 
+## Templating
 
+For now I didn't bother to add any mechanism to simplify templating as
+known from Sinatra, as I couldn't come up with a way to make
+[erlydtl](https://github.com/evanmiller/erlydtl) any easier to use as
+it already is.
 
+## License
+
+Please take a look at the `LICENSE` file! (tl;dl: it's the MIT License)
