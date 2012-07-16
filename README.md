@@ -1,13 +1,13 @@
 # Axiom
 
-Axiom aims at being a lightweight web framework. It inspired by
+Axiom aims at being a lightweight web framework. It is inspired by
 [Sinatra](http://sinatrarb.com) and built on top of
 [Cowboy](https://github.com/extend/cowboy).
 
 ## Getting started
 
 Axiom is built to make creating web applications fast and easy.
-A minimal setup would look like this:
+A minimal application would look like this:
 
 ```erlang
 -module(my_app).
@@ -15,19 +15,20 @@ A minimal setup would look like this:
 
 start() -> axiom:start(?MODULE).
 
-handle('GET', [<<"hi">>], _Params) ->
+handle('GET', [<<"hi">>], _Request) ->
 	<<"Hello world!">>.
 
 ```
 
-This example handles requests for `GET /hi` and returns "Hello world!".
+This handles requests for `GET /hi` and returns "Hello world!".
 
 The third argument, given to the handler contains a proplist of things
 we know about the request, such as `params`, `headers` and many more.
 
-There are two ways to be more specific about the response. The first is
-to use the `response` record. For that to work you need to include
-Axiom's response header file:
+For convenience, the return value can be a binary string like in the
+example. There are two ways, though,  to be more specific about the
+response. The first is to use the `response` record. For that to work
+you need to include Axiom's response header file:
 
 ```erlang
 -include_lib("axiom/include/response.hrl").
@@ -37,7 +38,7 @@ Then, in your handler specify the body, the status and/or some HTTP
 headers:
 
 ```erlang
-handle('GET', [<<"foo">>], Request) ->
+handle('GET', [<<"foo">>], _Request) ->
 	Response = #response{},
 	Headers = Response#response.headers ++ [{'Set-Cookie', "ping=pong"}],
 	#response{headers = Headers, body = <<"Go away!">>}.
