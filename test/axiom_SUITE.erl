@@ -4,7 +4,7 @@
 -include_lib("common_test/include/ct.hrl").
 -include_lib("axiom/include/response.hrl").
 
-all() -> [hello_world, post_with_params].
+all() -> [hello_world, post_with_params, not_found].
 
 hello_world(_Config) ->
 	{ok, {Status, Headers, Body}} = httpc:request("http://localhost:7654/"),
@@ -17,6 +17,13 @@ post_with_params(_Config) ->
 		{"http://localhost:7654/things?foo=bar", [], [], []}, [], []),
 	"foo = bar" = Body,
 	{"HTTP/1.1",403,"Forbidden"} = Status.
+
+not_found(_Config) ->
+	{ok, {Status, Headers, Body}} =
+		httpc:request("http://localhost:7654/do/not/find"),
+	"<h1>404 - Not Found</h1>" = Body,
+	{"HTTP/1.1",404,"Not Found"} = Status.
+
 
 
 % callbacks

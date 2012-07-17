@@ -56,7 +56,8 @@ handle(Req, State) ->
 	Resp = try
 		process_response(Handler:handle(Method, Path, Request))
 	catch
-		error:function_clause -> process_response(<<"<h1>404 - Not Found</h1>">>)
+		error:function_clause ->
+			#response{status = 404, body = <<"<h1>404 - Not Found</h1>">>}
 	end,
 	{ok, Response} = cowboy_http_req:reply(Resp#response.status,
 		Resp#response.headers, Resp#response.body, Req),
