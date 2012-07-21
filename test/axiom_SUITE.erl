@@ -22,13 +22,21 @@ not_found(Config) ->
 	"<h1>404 - Not Found</h1>" = Body,
 	{"HTTP/1.1",404,"Not Found"} = Status.
 
+render_template(Config) ->
+	file:make_dir("templates"),
+	Template = "templates/my_template.dtl",
+	ok = file:write_file(Template, "Hello {{who}} from {{from}}!"),
+	ok = erlydtl:compile(Template, my_template_dtl),
+	{ok, {Status, _Headers, Body}} =
+		httpc:request(base_url(Config) ++ "template/?who=you&from=me"),
+	"Hello you from me!" = Body.
 
 
 % callbacks
 
 all() -> [{group, with_defaults}, {group, with_options}].
 
-all_the_tests() -> [hello_world, not_found, post_with_params].
+all_the_tests() -> [hello_world, not_found, post_with_params, render_template].
 
 groups() -> [{with_defaults, [], all_the_tests()},
 		{with_options, [], all_the_tests()}].
@@ -62,7 +70,10 @@ handle('GET', [], _Request) ->
 handle('POST', [<<"things">>], Request) ->
 	[{Param, Value}] = proplists:get_value(params, Request),
 	Body = <<Param/binary, " = ", Value/binary>>,
-	#response{status = 403, body = Body}.
+	#response{status = 403, body = Body};
+
+handle('GET', [<<"template">>], Request) ->
+	axiom:dtl(my_template, proplists:get_value(params, Request)).
 
 % helpers
 

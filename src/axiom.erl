@@ -1,5 +1,5 @@
 -module(axiom).
--export([start/1, start/2, init/3, handle/2, stop/0, terminate/2]).
+-export([start/1, start/2, init/3, handle/2, stop/0, terminate/2, dtl/2]).
 -record(state, {handler}).
 
 -include_lib("cowboy/include/http.hrl").
@@ -75,4 +75,23 @@ process_response(Resp) when is_list(Resp) ->
 		B when is_binary(B) -> B
 	end,
 	#response{status = Status, headers = Headers, body = Body}.
+
+dtl(Template, Params) when is_atom(Template) ->
+	dtl(atom_to_list(Template), Params);
+
+dtl(Template, Params) when is_list(Template) ->
+	{ok, Response} =
+		apply(list_to_atom(Template ++ "_dtl"), render, [atomify_keys(Params)]),
+	list_to_binary(Response).
+
+atomify_keys([]) ->
+	[];
+
+atomify_keys([Head|Proplist]) ->
+	[Key|Tail] = tuple_to_list(Head),
+	Key2 = case Key of
+		K when is_binary(K) -> list_to_atom(binary_to_list(K));
+		K when is_list(K) -> list_to_atom(K)
+	end,
+	[list_to_tuple([Key2|Tail]) | atomify_keys(Proplist)].
 
