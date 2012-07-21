@@ -20,7 +20,6 @@ start(Handler, Options) ->
 	).
 
 stop() ->
-	cowboy:stop_listener(axiom_listener),
 	application:stop(cowboy),
 	application:unload(axiom).
 
@@ -46,7 +45,6 @@ handle(Req, State) ->
 	Method = proplists:get_value(method, Request),
 	Path = proplists:get_value(path, Request),
 	Handler = State#state.handler,
-	axiom_SUITE = Handler,
 	Resp = try
 		process_response(Handler:handle(Method, Path, Request))
 	catch
