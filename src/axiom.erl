@@ -1,5 +1,5 @@
 -module(axiom).
--export([start/1, init/3, handle/2, terminate/2]).
+-export([start/1, start/2, init/3, handle/2, stop/0, terminate/2]).
 -record(state, {handler}).
 
 -include_lib("cowboy/include/http.hrl").
@@ -9,8 +9,8 @@ start(Handler) ->
 	start(Handler, []).
 
 start(Handler, Options) ->
-	application:start(cowboy),
-	application:load(axiom),
+	ok = application:start(cowboy),
+	ok = application:load(axiom),
 	Dispatch = [{get_option(host, Options), [{get_option(path, Options), ?MODULE, [Handler]}]}],
 	cowboy:start_listener(
 		axiom_listener,
@@ -18,6 +18,11 @@ start(Handler, Options) ->
 		cowboy_tcp_transport, [{port, get_option(port, Options)}],
 		cowboy_http_protocol, [{dispatch, Dispatch}]
 	).
+
+stop() ->
+	cowboy:stop_listener(axiom_listener),
+	application:stop(cowboy),
+	application:unload(axiom).
 
 init({tcp, http}, Req, [Handler]) ->
 	{ok, Req, #state{handler = Handler}}.
@@ -27,7 +32,9 @@ terminate(_Req, _State) ->
 
 get_option(Opt, Options) ->
 	case proplists:get_value(Opt, Options) of
-		undefined -> application:get_env(?MODULE, Opt);
+		undefined ->
+			{ok, Val} = application:get_env(?MODULE, Opt),
+			Val;
 		Else -> Else
 	end.
 
@@ -39,6 +46,7 @@ handle(Req, State) ->
 	Method = proplists:get_value(method, Request),
 	Path = proplists:get_value(path, Request),
 	Handler = State#state.handler,
+	axiom_SUITE = Handler,
 	Resp = try
 		process_response(Handler:handle(Method, Path, Request))
 	catch

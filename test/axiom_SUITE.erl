@@ -4,23 +4,21 @@
 -include_lib("common_test/include/ct.hrl").
 -include_lib("axiom/include/response.hrl").
 
-all() -> [hello_world, post_with_params, not_found].
-
-hello_world(_Config) ->
-	{ok, {Status, Headers, Body}} = httpc:request("http://localhost:7654/"),
+hello_world(Config) ->
+	{ok, {Status, Headers, Body}} = httpc:request(base_url(Config)),
 	{"HTTP/1.1",200,"OK"} = Status,
 	"Hello world!" = Body,
 	"text/html" = proplists:get_value("content-type", Headers).
 
-post_with_params(_Config) ->
-	{ok, {Status, Headers, Body}} = httpc:request(post,
-		{"http://localhost:7654/things?foo=bar", [], [], []}, [], []),
+post_with_params(Config) ->
+	{ok, {Status, _Headers, Body}} = httpc:request(post,
+		{base_url(Config) ++ "things/?foo=bar", [], [], []}, [], []),
 	"foo = bar" = Body,
 	{"HTTP/1.1",403,"Forbidden"} = Status.
 
-not_found(_Config) ->
-	{ok, {Status, Headers, Body}} =
-		httpc:request("http://localhost:7654/do/not/find"),
+not_found(Config) ->
+	{ok, {Status, _Headers, Body}} =
+		httpc:request(base_url(Config) ++ "do/not/find"),
 	"<h1>404 - Not Found</h1>" = Body,
 	{"HTTP/1.1",404,"Not Found"} = Status.
 
@@ -28,20 +26,53 @@ not_found(_Config) ->
 
 % callbacks
 
+all() -> [{group, with_defaults}, {group, with_options}].
+
+all_the_tests() -> [hello_world, not_found, post_with_params].
+
+groups() -> [{with_defaults, [], all_the_tests()},
+		{with_options, [], all_the_tests()}].
+
 init_per_suite(Config) ->
 	inets:start(),
-	axiom:start(?MODULE),
-	timer:sleep(1000),
 	Config.
 
 end_per_suite(_Config) -> ok.
 
+init_per_group(with_defaults, Config) ->
+	axiom:start(?MODULE),
+	Config;
+
+init_per_group(with_options, Config) ->
+	Options = [{port, 7655}],
+	axiom:start(?MODULE, Options),
+	Options ++ Config.
+
+end_per_group(with_defaults, _Config) ->
+	axiom:stop();
+
+end_per_group(with_options, Config) ->
+	axiom:stop().
+
 % handlers
 
-handle('GET', [], Request) ->
+handle('GET', [], _Request) ->
 	<<"Hello world!">>;
 
 handle('POST', [<<"things">>], Request) ->
 	[{Param, Value}] = proplists:get_value(params, Request),
 	Body = <<Param/binary, " = ", Value/binary>>,
 	#response{status = 403, body = Body}.
+
+% helpers
+
+get_option(Opt, Config) ->
+	Defaults = [{port, 7654}],
+	case proplists:get_value(Opt, Config) of
+		undefined -> proplists:get_value(Opt, Defaults);
+		Else -> Else
+	end.
+
+base_url(Config) ->
+	"http://localhost:" ++ integer_to_list(get_option(port, Config)) ++ "/".
+
