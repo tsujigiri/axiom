@@ -1,12 +1,18 @@
 {application, axiom,
  [
-  {description, ""},
-  {vsn, "1"},
+  {description, "a lightweight web framework"},
+  {vsn, "0.0.1"},
   {registered, []},
   {applications, [
                   kernel,
-                  stdlib
+                  stdlib,
+                  cowboy
                  ]},
-  {mod, { axiom_app, []}},
-  {env, []}
+  {mod, {axiom, []}},
+  {env, [
+   {nb_acceptors, 100},
+   {host, '_'},
+   {port, 7654},
+   {path, '_'}
+  ]}
  ]}.

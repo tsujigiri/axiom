@@ -1,5 +1,5 @@
 -module(axiom).
--export([start/1, start_link/0, init/3, handle/2, terminate/2]).
+-export([start/1, init/3, handle/2, terminate/2]).
 -record(state, {handler}).
 
 -include_lib("cowboy/include/http.hrl").
@@ -9,40 +9,26 @@ start(Handler) ->
 	start(Handler, []).
 
 start(Handler, Options) ->
-	?MODULE = ets:new(?MODULE, [named_table]),
-	true = ets:insert(?MODULE, Options),
-	true = ets:insert(?MODULE, {start_pid, self()}),
-	true = ets:insert(?MODULE, {handler, Handler}),
-	ok = application:start(cowboy),
-	ok = application:start(axiom),
-	receive
-		thanks -> ok
-	end.
-
-start_link() ->
-	[Handler] = ets:lookup(?MODULE, handler),
-	Dispatch = [{get_option(host), [{get_option(path), ?MODULE, [Handler]}]}],
-	{ok, Pid} = cowboy:start_listener(
+	application:start(cowboy),
+	application:load(axiom),
+	Dispatch = [{get_option(host, Options), [{get_option(path, Options), ?MODULE, [Handler]}]}],
+	cowboy:start_listener(
 		axiom_listener,
-		get_option(nb_acceptors),
-		cowboy_tcp_transport, [{port, get_option(port)}],
+		get_option(nb_acceptors, Options),
+		cowboy_tcp_transport, [{port, get_option(port, Options)}],
 		cowboy_http_protocol, [{dispatch, Dispatch}]
-	),
-	true = link(Pid),
-	[{start_pid, StartPid}] = ets:lookup(?MODULE, start_pid),
-	StartPid ! thanks,
-	{ok, Pid}.
+	).
 
-get_option(Opt) ->
-	Defaults = [
-		{nb_acceptors, 100},
-		{host, '_'},
-		{port, 7654},
-		{path, '_'}
-	],
-	case ets:lookup(?MODULE, Opt) of
-		[{Opt, Value}] -> Value;
-		[] -> proplists:get_value(Opt, Defaults)
+init({tcp, http}, Req, [Handler]) ->
+	{ok, Req, #state{handler = Handler}}.
+
+terminate(_Req, _State) ->
+    ok.
+
+get_option(Opt, Options) ->
+	case proplists:get_value(Opt, Options) of
+		undefined -> application:get_env(?MODULE, Opt);
+		Else -> Else
 	end.
 
 handle(Req, State) ->
@@ -83,11 +69,4 @@ process_response(Resp) when is_list(Resp) ->
 		B when is_binary(B) -> B
 	end,
 	#response{status = Status, headers = Headers, body = Body}.
-
-init({tcp, http}, Req, Opts) ->
-	State = #state{handler = proplists:get_value(handler, Opts)},
-	{ok, Req, State}.
-
-terminate(_Req, _State) ->
-    ok.
 
