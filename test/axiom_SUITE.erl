@@ -2,7 +2,24 @@
 -compile(export_all).
 -include_lib("eunit/include/eunit.hrl").
 -include_lib("common_test/include/ct.hrl").
+-include_lib("cowboy/include/http.hrl").
 -include_lib("axiom/include/response.hrl").
+
+
+redirect(Config) ->
+	Req = [{params, []} | lists:zip(record_info(fields, http_req),
+		tl(tuple_to_list(#http_req{version = {1,1},
+					host = "example.com", port = 2342, method = 'GET'})))],
+	#response{status = Status, headers = Headers} = axiom:redirect("/foo/bar", Req),
+	"http://example.com:2342/foo/bar" = proplists:get_value('Location', Headers),
+	#response{status = 302, headers = Headers2} = axiom:redirect("http://example.org/foo/bar", Req),
+	"http://example.org/foo/bar" = proplists:get_value('Location', Headers2),
+	Req2 = [{params, []} | lists:zip(record_info(fields, http_req),
+		tl(tuple_to_list(#http_req{version = {1,1},
+					host = "example.com", port = 80, method = 'POST'})))],
+	#response{status = 303, headers = Headers3} = axiom:redirect("/foo/bar", Req2),
+	"http://example.com/foo/bar" = proplists:get_value('Location', Headers3).
+
 
 hello_world(Config) ->
 	{ok, {Status, Headers, Body}} = httpc:request(base_url(Config)),
@@ -31,15 +48,22 @@ render_template(Config) ->
 		httpc:request(base_url(Config) ++ "template/?who=you&from=me"),
 	"Hello you from me!" = Body.
 
+http_redirect(Config) ->
+	{ok, {Status, Headers, Body}} =
+	httpc:request(get, {base_url(Config) ++ "where/are/you", []},
+			[{autoredirect, false}],[]),
+	{"HTTP/1.1",302,"Found"} = Status,
+	"http://example.com/over/here" = proplists:get_value("location", Headers).
 
-% callbacks
+% suite
 
 all() -> [{group, with_defaults}, {group, with_options}].
 
-all_the_tests() -> [hello_world, not_found, post_with_params, render_template].
-
-groups() -> [{with_defaults, [], all_the_tests()},
-		{with_options, [], all_the_tests()}].
+groups() -> [
+		{with_defaults, [],
+			[hello_world, not_found, post_with_params, render_template,
+				redirect, http_redirect]},
+		{with_options, [], [hello_world]}].
 
 init_per_suite(Config) ->
 	inets:start(),
@@ -73,7 +97,10 @@ handle('POST', [<<"things">>], Request) ->
 	#response{status = 403, body = Body};
 
 handle('GET', [<<"template">>], Request) ->
-	axiom:dtl(my_template, proplists:get_value(params, Request)).
+	axiom:dtl(my_template, proplists:get_value(params, Request));
+
+handle('GET', [<<"where">>, <<"are">>, <<"you">>], Request) ->
+	axiom:redirect("http://example.com/over/here", Request).
 
 % helpers
 

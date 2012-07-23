@@ -1,5 +1,11 @@
 -module(axiom).
--export([start/1, start/2, init/3, handle/2, stop/0, terminate/2, dtl/2]).
+
+% callbacks
+-export([init/3, handle/2, terminate/2]).
+
+% api
+-export([start/1, start/2, stop/0, dtl/2, redirect/2]).
+
 -record(state, {handler}).
 
 -include_lib("cowboy/include/http.hrl").
@@ -94,4 +100,34 @@ atomify_keys([Head|Proplist]) ->
 		K when is_list(K) -> list_to_atom(K)
 	end,
 	[list_to_tuple([Key2|Tail]) | atomify_keys(Proplist)].
+
+redirect(UrlOrPath, Request) ->
+	Req = list_to_tuple([http_req | tl(element(2, lists:unzip(Request)))]),
+	{ok, UrlRegex} = re:compile("^https?://"),
+	Url = case re:run(UrlOrPath, UrlRegex) of
+		{match, _} -> UrlOrPath;
+		nomatch ->
+			[
+				<<"http">>,
+				case Req#http_req.transport of
+					cowboy_ssl_transport -> <<"s">>;
+					_ -> <<>>
+				end,
+				<<"://">>,
+				Req#http_req.host,
+				case Req#http_req.port of
+					80 -> <<>>;
+					Port -> [<<":">>, integer_to_list(Port)]
+				end,
+				UrlOrPath
+			]
+	end,
+	Status = case {Req#http_req.version, Req#http_req.method} of
+		{{1,1}, 'GET'} -> 302;
+		{{1,1}, _} -> 303;
+		_ -> 302
+	end,
+	#response{status = Status,
+		headers = [{'Location', binary_to_list(iolist_to_binary(Url))}]}.
+
 
