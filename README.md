@@ -61,6 +61,47 @@ proplist:
 Again, you don't need to specify all of them, sane defaults also apply
 to the proplist-way.
 
+### Redirects
+
+You can redirect requests with `redirect/2`:
+
+```erlang
+handle('GET', [<<"foo">>], Request) ->
+	axiom:redirect("/bar", Request);
+
+handle('GET', [<<"bar">>], Request) ->
+	<<"<h1>Welcome back!</h1>">>.
+```
+
+### Templates
+
+Axiom comes with [Django](https://github.com/django/django) template
+support via [erlydtl](https://github.com/evanmiller/erlydtl). To make
+use of it in your application, create a directory named `templates` and
+in it, create a template, e.g. `my_template.dtl`:
+
+```dtl
+<h1>Hello {{who}}</h1>
+```
+
+In your handler, specify the template to be rendered:
+
+```erlang
+handle('GET', [<<"hello">>], _Request) ->
+	axiom:dtl(my_template, [{who, "you"}]).
+```
+
+For convenience, the second argument, a proplist of parameters, can have
+atoms, lists or binaries as keys. That way request parameters can be put
+in there, without you having to convert them first.
+
+The templates are compiled into modules when `rebar compile` is
+called.
+
+To see what else erlydtl can do for you, take a look at
+[its project page](https://code.google.com/p/erlydtl/).
+
+
 ## Configuration
 
 `axiom:start/1` has a bigger brother called `axiom:start/2`, taking a
@@ -92,34 +133,6 @@ then, as usual:
 rebar get-deps
 rebar compile
 ```
-
-## Templating
-
-Axiom comes with [Django](https://github.com/django/django) template
-support via [erlydtl](https://github.com/evanmiller/erlydtl). To make
-use of it in your application, create a directory named `templates` and
-in it, create a template, e.g. `my_template.dtl`:
-
-```dtl
-<h1>Hello {{who}}</h1>
-```
-
-In your handler, specify the template to be rendered:
-
-```erlang
-handle('GET', [<<"hello">>], _Request) ->
-	axiom:dtl(my_template, [{who, "you"}]).
-```
-
-For convenience, the second argument, a proplist of parameters, can have
-atoms, lists or binaries as keys. That way request parameters can be put
-in there, without you having to convert them first.
-
-The templates are compiled into modules when `rebar compile` is
-called.
-
-To see what else erlydtl can do for you, take a look at
-[its project page](https://code.google.com/p/erlydtl/).
 
 ## License
 
