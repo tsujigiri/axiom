@@ -10,19 +10,24 @@
 
 -include_lib("cowboy/include/http.hrl").
 -include_lib("axiom/include/response.hrl").
+-include_lib("kernel/include/file.hrl").
 
 start(Handler) ->
 	start(Handler, []).
 
 start(Handler, Options) ->
-	ok = application:start(cowboy),
 	ok = application:load(axiom),
-	Dispatch = [{get_option(host, Options), [{get_option(path, Options), ?MODULE, [Handler]}]}],
+	Dispatch = [
+		{get_option(host, Options), static_dispatch(Options) ++
+				[{get_option(path, Options), ?MODULE, [Handler]}]}
+	],
+	ok = application:start(cowboy),
 	cowboy:start_listener(
 		axiom_listener,
 		get_option(nb_acceptors, Options),
 		cowboy_tcp_transport, [{port, get_option(port, Options)}],
 		cowboy_http_protocol, [{dispatch, Dispatch}]
+
 	).
 
 stop() ->
@@ -115,4 +120,25 @@ redirect(UrlOrPath, Request) ->
 	#response{status = Status,
 		headers = [{'Location', binary_to_list(iolist_to_binary(Url))}]}.
 
+
+static_dispatch(Options) ->
+	PubDir = get_option(public, Options),
+	Files = case file:list_dir(PubDir) of
+		{error, enoent} -> [];
+		{ok, F} -> F
+	end,
+	{Dirs, _} = lists:splitwith(fun(F) ->
+				{ok, FileInfo} = file:read_file_info([PubDir, "/", F]),
+				FileInfo#file_info.type == directory
+		end, Files),
+	lists:map(fun(Dir) ->
+				{
+					[list_to_binary(Dir), '...'],
+					cowboy_http_static,
+					[
+						{directory, [list_to_binary(PubDir), list_to_binary(Dir)]},
+						{mimetypes, {fun mimetypes:path_to_mimes/2, default}}
+					]
+				}
+		end, Dirs).
 

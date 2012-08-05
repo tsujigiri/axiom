@@ -14,6 +14,7 @@
    {nb_acceptors, 100},
    {host, '_'},
    {port, 7654},
-   {path, '_'}
+   {path, '_'},
+   {public, "public"}
   ]}
  ]}.

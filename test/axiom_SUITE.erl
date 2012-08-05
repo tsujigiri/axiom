@@ -23,7 +23,7 @@ redirect(_Config) ->
 
 http_hello_world(Config) ->
 	{ok, {Status, Headers, Body}} = httpc:request(base_url(Config)),
-	%{"HTTP/1.1",200,"OK"} = Status,
+	{"HTTP/1.1",200,"OK"} = Status,
 	"Hello world!" = Body,
 	"text/html" = proplists:get_value("content-type", Headers).
 
@@ -61,16 +61,23 @@ http_respond_with_iolist(Config) ->
 	{"HTTP/1.1",200,"OK"} = Status,
 	"I am an iolist!" = Body.
 
+http_hello_static(Config) ->
+	{ok, {Status, _Headers, Body}} =
+	httpc:request(get, {base_url(Config) ++ "html/index.html", []}, [],[]),
+	{"HTTP/1.1",200,"OK"} = Status,
+	"<h1>It works!</h1>" = Body.
+
 
 % suite
 
-all() -> [{group, with_defaults}, {group, with_options}].
+all() -> [{group, with_defaults}, {group, with_options}, {group, static_files}].
 
 groups() -> [
 		{with_defaults, [],
 			[redirect, http_hello_world, http_not_found, http_post_with_params,
 				http_render_template, http_redirect, http_respond_with_iolist]},
-		{with_options, [], [http_hello_world]}].
+		{with_options, [], [http_hello_world]},
+		{static_files, [], [http_hello_static]}].
 
 init_per_suite(Config) ->
 	inets:start(),
@@ -85,12 +92,23 @@ init_per_group(with_defaults, Config) ->
 init_per_group(with_options, Config) ->
 	Options = [{port, 7655}],
 	axiom:start(?MODULE, Options),
-	Options ++ Config.
+	Options ++ Config;
+
+init_per_group(static_files, Config) ->
+	ok = file:make_dir("public"),
+	ok = file:make_dir("public/html"),
+	ok = file:write_file("public/html/index.html", "<h1>It works!</h1>"),
+	ok = file:write_file("public/ignored.html", "<h1>O NOES!</h1>"),
+	axiom:start(?MODULE),
+	Config.
 
 end_per_group(with_defaults, _Config) ->
 	axiom:stop();
 
 end_per_group(with_options, _Config) ->
+	axiom:stop();
+
+end_per_group(static_files, _Config) ->
 	axiom:stop().
 
 % handlers
