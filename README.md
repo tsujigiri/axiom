@@ -123,7 +123,7 @@ To use it in your OTP application, add this to your `rebar.config`:
 ```erlang
 {lib_dirs, ["deps"]}.
 {deps, [
-	{'axiom', "0.0.2", {git, "git://github.com/tsujigiri/axiom.git", {tag, "v0.0.2"}}}
+	{'axiom', "0.0.3", {git, "git://github.com/tsujigiri/axiom.git", {tag, "v0.0.3"}}}
 ]}.
 ```
 
