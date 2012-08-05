@@ -61,26 +61,11 @@ handle(Req, State) ->
 		Resp#response.headers, Resp#response.body, Req),
 	{ok, Response, State}.
 
-process_response(Resp) when is_binary(Resp) ->
-	#response{body=Resp};
-
-process_response(Resp) when is_tuple(Resp) ->
+process_response(Resp = #response{}) ->
 	Resp;
 
-process_response(Resp) when is_list(Resp) ->
-	Status = case proplists:get_value(status, Resp) of
-		undefined -> #response.status;
-		S when is_integer(S) -> S
-	end,
-	Headers = case proplists:get_value(headers, Resp) of
-		undefined -> #response.headers;
-		H when is_list(H) -> H
-	end,
-	Body = case proplists:get_value(body, Resp) of
-		undefined -> #response.body;
-		B when is_binary(B) -> B
-	end,
-	#response{status = Status, headers = Headers, body = Body}.
+process_response(Resp) when is_binary(Resp); is_list(Resp) ->
+	#response{body=Resp}.
 
 dtl(Template, Params) when is_atom(Template) ->
 	dtl(atom_to_list(Template), Params);
@@ -88,7 +73,7 @@ dtl(Template, Params) when is_atom(Template) ->
 dtl(Template, Params) when is_list(Template) ->
 	{ok, Response} =
 		apply(list_to_atom(Template ++ "_dtl"), render, [atomify_keys(Params)]),
-	list_to_binary(Response).
+	Response.
 
 atomify_keys([]) ->
 	[];

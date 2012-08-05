@@ -25,10 +25,9 @@ This handles requests for `GET /hi` and returns "Hello world!".
 The third argument, given to the handler contains a proplist of things
 we know about the request, such as `params`, `headers` and many more.
 
-For convenience, the return value can be a binary string like in the
-example. There are two ways, though,  to be more specific about the
-response. The first is to use the `response` record. For that to work
-you need to include Axiom's response header file:
+For convenience, the return value can be a binary string or iolist. To
+be more specific about the response, use the `response` record. For that
+to work you need to include Axiom's response header file:
 
 ```erlang
 -include_lib("axiom/include/response.hrl").
@@ -50,16 +49,6 @@ don't need to specify every one of them:
 ```erlang
 -record(response, {status = 200, headers = [{'Content-Type', "text/html"}], body = <<"">>}).
 ```
-
-The other way to specify the response is to put the above params into a
-proplist:
-
-```erlang
-[{status, 403}, {body, <<"Go away!">>}, {headers, []}]
-```
-
-Again, you don't need to specify all of them, sane defaults also apply
-to the proplist-way.
 
 ### Redirects
 
@@ -123,7 +112,7 @@ To use it in your OTP application, add this to your `rebar.config`:
 ```erlang
 {lib_dirs, ["deps"]}.
 {deps, [
-	{'axiom', "0.0.2", {git, "git://github.com/tsujigiri/axiom.git", {tag, "v0.0.2"}}}
+	{'axiom', "0.0.4", {git, "git://github.com/tsujigiri/axiom.git", {tag, "v0.0.4"}}}
 ]}.
 ```
 
