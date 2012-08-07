@@ -4,7 +4,7 @@ Axiom is a lightweight web framework, inspired by
 [Sinatra](http://sinatrarb.com) and built on top of
 [Cowboy](https://github.com/extend/cowboy).
 
-## Getting started
+## Getting Started
 
 Axiom is built to make creating web applications fast and easy.
 A minimal application would look like this:
@@ -49,6 +49,20 @@ don't need to specify every one of them:
 ```erlang
 -record(response, {status = 200, headers = [{'Content-Type', "text/html"}], body = <<"">>}).
 ```
+
+
+### Static Files
+
+Static files are serverd via the `cowboy_http_static` handler. By
+default, every directory in your application's `./public` directory
+will be made accessible via a URL path prefix by the same name. E.g. the
+file `./public/css/style.css` can be accessed via `GET /css/style.css`.
+
+`./public/index.html` will not be served (yet), as `cowboy_http_static`
+requires the URL path prefix.
+
+You can specify a custom directory via the `public` option.
+
 
 ### Redirects
 
@@ -99,9 +113,10 @@ are as follows:
 
 ```erlang
 [
-	{nb_acceptors: 100},	% acceptor pool size
-	{host, '_'},		% host IP
-	{port, 7654}		% host port
+	{nb_acceptors: 100},		% acceptor pool size
+	{host, '_'},				% host IP
+	{port, 7654},				% host port
+	{public, "/foo/assets"}		% custom path for static files
 ]
 ```
 
