@@ -120,7 +120,7 @@ are as follows:
 	{nb_acceptors: 100},		% acceptor pool size
 	{host, '_'},				% host IP
 	{port, 7654},				% host port
-	{public, "/foo/assets"}		% custom path for static files
+	{public, "public"}		% custom path for static files
 ]
 ```
 
