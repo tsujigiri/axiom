@@ -86,8 +86,9 @@ atomify_keys([]) ->
 atomify_keys([Head|Proplist]) ->
 	[Key|Tail] = tuple_to_list(Head),
 	Key2 = case Key of
-		K when is_binary(K) -> list_to_atom(binary_to_list(K));
-		K when is_list(K) -> list_to_atom(K)
+               K when is_binary(K) -> list_to_atom(binary_to_list(K));
+               K when is_list(K) -> list_to_atom(K);
+               K when is_atom(K) -> K
 	end,
 	[list_to_tuple([Key2|Tail]) | atomify_keys(Proplist)].
 
