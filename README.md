@@ -1,4 +1,4 @@
-# Axiom
+# Axiom [![Build Status](https://secure.travis-ci.org/tsujigiri/axiom.png?branch=master)](http://travis-ci.org/tsujigiri/axiom)
 
 Axiom is a lightweight web framework, inspired by
 [Sinatra](http://sinatrarb.com) and built on top of
