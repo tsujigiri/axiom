@@ -12,6 +12,9 @@
 -include_lib("axiom/include/response.hrl").
 -include_lib("kernel/include/file.hrl").
 
+
+%% API
+
 start(Handler) ->
 	start(Handler, []).
 
@@ -34,44 +37,6 @@ stop() ->
 	application:stop(cowboy),
 	application:unload(axiom).
 
-init({tcp, http}, Req, [Handler]) ->
-	{ok, Req, #state{handler = Handler}}.
-
-terminate(_Req, _State) ->
-    ok.
-
-get_option(Opt, Options) ->
-	case proplists:get_value(Opt, Options) of
-		undefined ->
-			{ok, Val} = application:get_env(?MODULE, Opt),
-			Val;
-		Else -> Else
-	end.
-
-handle(Req, State) ->
-	Request = [{params,
-			element(1, cowboy_http_req:body_qs(Req)) ++
-			element(1, cowboy_http_req:qs_vals(Req))} |
-		lists:zip(record_info(fields, http_req), tl(tuple_to_list(Req)))],
-	Method = proplists:get_value(method, Request),
-	Path = proplists:get_value(path, Request),
-	Handler = State#state.handler,
-	Resp = try
-		process_response(Handler:handle(Method, Path, Request))
-	catch
-		error:function_clause ->
-			#response{status = 404, body = <<"<h1>404 - Not Found</h1>">>}
-	end,
-	{ok, Response} = cowboy_http_req:reply(Resp#response.status,
-		Resp#response.headers, Resp#response.body, Req),
-	{ok, Response, State}.
-
-process_response(Resp = #response{}) ->
-	Resp;
-
-process_response(Resp) when is_binary(Resp); is_list(Resp) ->
-	#response{body=Resp}.
-
 dtl(Template, Params) when is_atom(Template) ->
 	dtl(atom_to_list(Template), Params);
 
@@ -79,18 +44,6 @@ dtl(Template, Params) when is_list(Template) ->
 	{ok, Response} =
 		apply(list_to_atom(Template ++ "_dtl"), render, [atomify_keys(Params)]),
 	Response.
-
-atomify_keys([]) ->
-	[];
-
-atomify_keys([Head|Proplist]) ->
-	[Key|Tail] = tuple_to_list(Head),
-	Key2 = case Key of
-               K when is_binary(K) -> list_to_atom(binary_to_list(K));
-               K when is_list(K) -> list_to_atom(K);
-               K when is_atom(K) -> K
-	end,
-	[list_to_tuple([Key2|Tail]) | atomify_keys(Proplist)].
 
 redirect(UrlOrPath, Request) ->
 	Req = list_to_tuple([http_req | tl(element(2, lists:unzip(Request)))]),
@@ -122,6 +75,66 @@ redirect(UrlOrPath, Request) ->
 		headers = [{'Location', binary_to_list(iolist_to_binary(Url))}]}.
 
 
+
+%% CALLBACKS
+
+handle(Req, State) ->
+	Request = [{params,
+			element(1, cowboy_http_req:body_qs(Req)) ++
+			element(1, cowboy_http_req:qs_vals(Req))} |
+		lists:zip(record_info(fields, http_req), tl(tuple_to_list(Req)))],
+	Method = proplists:get_value(method, Request),
+	Path = proplists:get_value(path, Request),
+	Handler = State#state.handler,
+	Resp = try
+		process_response(Handler:handle(Method, Path, Request))
+	catch
+		error:function_clause ->
+			#response{status = 404, body = <<"<h1>404 - Not Found</h1>">>}
+	end,
+	{ok, Response} = cowboy_http_req:reply(Resp#response.status,
+		Resp#response.headers, Resp#response.body, Req),
+	{ok, Response, State}.
+
+
+init({tcp, http}, Req, [Handler]) ->
+	{ok, Req, #state{handler = Handler}}.
+
+
+terminate(_Req, _State) ->
+    ok.
+
+
+%% INTERNAL FUNCTIONS
+
+get_option(Opt, Options) ->
+	case proplists:get_value(Opt, Options) of
+		undefined ->
+			{ok, Val} = application:get_env(?MODULE, Opt),
+			Val;
+		Else -> Else
+	end.
+
+process_response(Resp = #response{}) ->
+	Resp;
+
+process_response(Resp) when is_binary(Resp); is_list(Resp) ->
+	#response{body=Resp}.
+
+
+atomify_keys([]) ->
+	[];
+
+atomify_keys([Head|Proplist]) ->
+	[Key|Tail] = tuple_to_list(Head),
+	Key2 = case Key of
+               K when is_binary(K) -> list_to_atom(binary_to_list(K));
+               K when is_list(K) -> list_to_atom(K);
+               K when is_atom(K) -> K
+	end,
+	[list_to_tuple([Key2|Tail]) | atomify_keys(Proplist)].
+
+
 static_dispatch(Options) ->
 	PubDir = get_option(public, Options),
 	Files = case file:list_dir(PubDir) of
@@ -142,4 +155,5 @@ static_dispatch(Options) ->
 					]
 				}
 		end, Dirs).
+
 
