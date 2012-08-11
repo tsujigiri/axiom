@@ -15,9 +15,11 @@
 
 %% API
 
+-spec start(module()) -> {ok, pid()}.
 start(Handler) ->
 	start(Handler, []).
 
+-spec start(module(), [tuple()]) -> {ok, pid()}.
 start(Handler, Options) ->
 	ok = application:load(axiom),
 	Dispatch = [
@@ -33,10 +35,13 @@ start(Handler, Options) ->
 
 	).
 
+-spec stop() -> ok.
 stop() ->
 	application:stop(cowboy),
 	application:unload(axiom).
 
+-spec dtl(atom(), [tuple()]) -> iolist();
+         (string(), [tuple()]) -> iolist().
 dtl(Template, Params) when is_atom(Template) ->
 	dtl(atom_to_list(Template), Params);
 
@@ -45,6 +50,7 @@ dtl(Template, Params) when is_list(Template) ->
 		apply(list_to_atom(Template ++ "_dtl"), render, [atomify_keys(Params)]),
 	Response.
 
+-spec redirect(string(), [tuple()]) -> #response{}.
 redirect(UrlOrPath, Request) ->
 	Req = list_to_tuple([http_req | tl(element(2, lists:unzip(Request)))]),
 	{ok, UrlRegex} = re:compile("^https?://"),
@@ -78,6 +84,7 @@ redirect(UrlOrPath, Request) ->
 
 %% CALLBACKS
 
+-spec handle(#http_req{}, #state{}) -> {ok, #http_req{}, #state{}}.
 handle(Req, State) ->
 	Request = [{params,
 			element(1, cowboy_http_req:body_qs(Req)) ++
@@ -92,21 +99,24 @@ handle(Req, State) ->
 		error:function_clause ->
 			#response{status = 404, body = <<"<h1>404 - Not Found</h1>">>}
 	end,
-	{ok, Response} = cowboy_http_req:reply(Resp#response.status,
+	{ok, Req2} = cowboy_http_req:reply(Resp#response.status,
 		Resp#response.headers, Resp#response.body, Req),
-	{ok, Response, State}.
+	{ok, Req2, State}.
 
 
+-spec init({tcp, http}, #http_req{}, [module()]) -> {ok, #http_req{}, #state{}}.
 init({tcp, http}, Req, [Handler]) ->
 	{ok, Req, #state{handler = Handler}}.
 
 
+-spec terminate(#http_req{}, #state{}) -> ok.
 terminate(_Req, _State) ->
     ok.
 
 
 %% INTERNAL FUNCTIONS
 
+-spec get_option(atom(), [tuple()]) -> any().
 get_option(Opt, Options) ->
 	case proplists:get_value(Opt, Options) of
 		undefined ->
@@ -115,6 +125,8 @@ get_option(Opt, Options) ->
 		Else -> Else
 	end.
 
+-spec process_response(#response{}) -> #response{};
+                      (iolist()) -> #response{}.
 process_response(Resp = #response{}) ->
 	Resp;
 
@@ -122,6 +134,8 @@ process_response(Resp) when is_binary(Resp); is_list(Resp) ->
 	#response{body=Resp}.
 
 
+-spec atomify_keys([]) -> [];
+                  ([tuple(), ...]) -> [tuple()].
 atomify_keys([]) ->
 	[];
 
@@ -135,6 +149,7 @@ atomify_keys([Head|Proplist]) ->
 	[list_to_tuple([Key2|Tail]) | atomify_keys(Proplist)].
 
 
+-spec static_dispatch([tuple()]) -> [tuple()].
 static_dispatch(Options) ->
 	PubDir = get_option(public, Options),
 	Files = case file:list_dir(PubDir) of
