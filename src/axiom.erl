@@ -4,7 +4,7 @@
 -export([init/3, handle/2, terminate/2]).
 
 % api
--export([start/1, start/2, stop/0, dtl/2, redirect/2]).
+-export([start/1, start/2, stop/0, params/1, dtl/2, redirect/2]).
 
 -record(state, {handler}).
 
@@ -21,18 +21,21 @@ start(Handler) ->
 
 -spec start(module(), [tuple()]) -> {ok, pid()}.
 start(Handler, Options) ->
-	ok = application:load(axiom),
-	Dispatch = [
-		{get_option(host, Options), static_dispatch(Options) ++
-				[{get_option(path, Options), ?MODULE, [Handler]}]}
-	],
+	application:load(axiom),
+	lists:map(fun({K,V}) -> application:set_env(?MODULE, K, V) end, Options),
+	{ok, Host} = application:get_env(axiom, host),
+	{ok, Path} = application:get_env(axiom, path),
+	Dispatch = [{Host, static_dispatch() ++ [{Path, ?MODULE, [Handler]}]}],
 	ok = application:start(cowboy),
-	cowboy:start_listener(
-		axiom_listener,
-		get_option(nb_acceptors, Options),
-		cowboy_tcp_transport, [{port, get_option(port, Options)}],
+	ok = case application:get_env(axiom, sessions) of
+		{ok, _} -> application:start(axiom);
+		_ -> ok
+	end,
+	{ok, NbAcceptors} = application:get_env(axiom, nb_acceptors),
+	{ok, Port} = application:get_env(axiom, port),
+	cowboy:start_listener(axiom_listener, NbAcceptors,
+		cowboy_tcp_transport, [{port, Port}],
 		cowboy_http_protocol, [{dispatch, Dispatch}]
-
 	).
 
 -spec stop() -> ok.
@@ -50,9 +53,8 @@ dtl(Template, Params) when is_list(Template) ->
 		apply(list_to_atom(Template ++ "_dtl"), render, [atomify_keys(Params)]),
 	Response.
 
--spec redirect(string(), [tuple()]) -> #response{}.
-redirect(UrlOrPath, Request) ->
-	Req = list_to_tuple([http_req | tl(element(2, lists:unzip(Request)))]),
+-spec redirect(string(), #http_req{}) -> #response{}.
+redirect(UrlOrPath, Req) ->
 	{ok, UrlRegex} = re:compile("^https?://"),
 	Url = case re:run(UrlOrPath, UrlRegex) of
 		{match, _} -> UrlOrPath;
@@ -80,28 +82,30 @@ redirect(UrlOrPath, Request) ->
 	#response{status = Status,
 		headers = [{'Location', binary_to_list(iolist_to_binary(Url))}]}.
 
+-spec params(#http_req{}) -> [tuple()].
+params(Req) ->
+	element(1, cowboy_http_req:body_qs(Req)) ++
+	element(1, cowboy_http_req:qs_vals(Req)).
+
 
 
 %% CALLBACKS
 
 -spec handle(#http_req{}, #state{}) -> {ok, #http_req{}, #state{}}.
 handle(Req, State) ->
-	Request = [{params,
-			element(1, cowboy_http_req:body_qs(Req)) ++
-			element(1, cowboy_http_req:qs_vals(Req))} |
-		lists:zip(record_info(fields, http_req), tl(tuple_to_list(Req)))],
-	Method = proplists:get_value(method, Request),
-	Path = proplists:get_value(path, Request),
+	Req2 = axiom_session:new(Req),
+	Method = Req2#http_req.method,
+	Path = Req2#http_req.path,
 	Handler = State#state.handler,
 	Resp = try
-		process_response(Handler:handle(Method, Path, Request))
+		process_response(Handler:handle(Method, Path, Req2))
 	catch
 		error:function_clause ->
 			#response{status = 404, body = <<"<h1>404 - Not Found</h1>">>}
 	end,
-	{ok, Req2} = cowboy_http_req:reply(Resp#response.status,
-		Resp#response.headers, Resp#response.body, Req),
-	{ok, Req2, State}.
+	{ok, Req3} = cowboy_http_req:reply(Resp#response.status,
+		Resp#response.headers, Resp#response.body, Req2),
+	{ok, Req3, State}.
 
 
 -spec init({tcp, http}, #http_req{}, [module()]) -> {ok, #http_req{}, #state{}}.
@@ -115,15 +119,6 @@ terminate(_Req, _State) ->
 
 
 %% INTERNAL FUNCTIONS
-
--spec get_option(atom(), [tuple()]) -> any().
-get_option(Opt, Options) ->
-	case proplists:get_value(Opt, Options) of
-		undefined ->
-			{ok, Val} = application:get_env(?MODULE, Opt),
-			Val;
-		Else -> Else
-	end.
 
 -spec process_response(#response{}) -> #response{};
                       (iolist()) -> #response{}.
@@ -149,9 +144,9 @@ atomify_keys([Head|Proplist]) ->
 	[list_to_tuple([Key2|Tail]) | atomify_keys(Proplist)].
 
 
--spec static_dispatch([tuple()]) -> [tuple()].
-static_dispatch(Options) ->
-	PubDir = get_option(public, Options),
+-spec static_dispatch() -> [tuple()].
+static_dispatch() ->
+	{ok, PubDir} = application:get_env(axiom, public),
 	Files = case file:list_dir(PubDir) of
 		{error, enoent} -> [];
 		{ok, F} -> F

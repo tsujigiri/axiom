@@ -1,15 +1,14 @@
 {application, axiom,
  [
   {description, "a lightweight web framework"},
-  {vsn, "0.0.2"},
+  {vsn, "0.0.6"},
   {registered, []},
   {applications, [
                   kernel,
                   stdlib,
-                  cowboy,
-                  erlydtl
+                  cowboy
                  ]},
-  {mod, {axiom, []}},
+  {mod, {axiom_app, []}},
   {env, [
    {nb_acceptors, 100},
    {host, '_'},

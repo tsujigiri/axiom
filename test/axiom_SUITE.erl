@@ -7,16 +7,14 @@
 
 
 redirect(_Config) ->
-	Req = [{params, []} | lists:zip(record_info(fields, http_req),
-		tl(tuple_to_list(#http_req{version = {1,1},
-					host = "example.com", port = 2342, method = 'GET'})))],
+	Req = #http_req{version = {1,1}, host = "example.com", port = 2342,
+		method = 'GET'},
 	#response{headers = Headers} = axiom:redirect("/foo/bar", Req),
 	"http://example.com:2342/foo/bar" = proplists:get_value('Location', Headers),
 	#response{status = 302, headers = Headers2} = axiom:redirect("http://example.org/foo/bar", Req),
 	"http://example.org/foo/bar" = proplists:get_value('Location', Headers2),
-	Req2 = [{params, []} | lists:zip(record_info(fields, http_req),
-		tl(tuple_to_list(#http_req{version = {1,1},
-					host = "example.com", port = 80, method = 'POST'})))],
+	Req2 = #http_req{version = {1,1}, host = "example.com", port = 80,
+		method = 'POST'},
 	#response{status = 303, headers = Headers3} = axiom:redirect("/foo/bar", Req2),
 	"http://example.com/foo/bar" = proplists:get_value('Location', Headers3).
 
@@ -117,12 +115,12 @@ handle('GET', [], _Request) ->
 	<<"Hello world!">>;
 
 handle('POST', [<<"things">>], Request) ->
-	[{Param, Value}] = proplists:get_value(params, Request),
+	[{Param, Value}] = axiom:params(Request),
 	Body = <<Param/binary, " = ", Value/binary>>,
 	#response{status = 403, body = Body};
 
 handle('GET', [<<"template">>], Request) ->
-	axiom:dtl(my_template, proplists:get_value(params, Request));
+	axiom:dtl(my_template, axiom:params(Request));
 
 handle('GET', [<<"where">>, <<"are">>, <<"you">>], Request) ->
 	axiom:redirect("http://example.com/over/here", Request);
