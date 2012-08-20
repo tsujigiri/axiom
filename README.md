@@ -22,8 +22,8 @@ handle('GET', [<<"hi">>], _Request) ->
 
 This handles requests for `GET /hi` and returns "Hello world!".
 
-The third argument, given to the handler contains a proplist of things
-we know about the request, such as `params`, `headers` and many more.
+The third argument, given to the handler contains a record of type
+`http_req`, as known from Cowboy.
 
 For convenience, the return value can be a binary string or iolist. To
 be more specific about the response, use the `response` record. For that
@@ -108,6 +108,21 @@ called.
 To see what else erlydtl can do for you, take a look at
 [its project page](https://code.google.com/p/erlydtl/).
 
+## Sessions
+
+Axiom comes with a basic session handler and ets based session store. To
+use it, add this tuple to the configuration proplist:
+
+```erlang
+{sessions, {axiom_session_ets, []}}
+```
+
+`axiom_session_ets` is the session store module and can be easily
+replaced by your own. To see how, just look into that module.
+
+In your handler you can then use
+`axiom_session:set(Key, Value, Request)` and
+`axiom_session:get(Key, Request)`.
 
 ## Configuration
 
