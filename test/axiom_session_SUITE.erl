@@ -9,9 +9,9 @@ all() -> [new_session, set_value, get_value].
 
 new_session(_Config) ->
 	Req = #http_req{},
-	{ok, SessionId, Req2} = axiom_session:new(Req),
-	?assertNotEqual(undefined, SessionId),
-	{SessionId, Req2} = cowboy_http_req:meta(session_id, Req2).
+	Req2 = axiom_session:new(Req),
+	{SessionId, Req2} = cowboy_http_req:meta(session_id, Req2),
+	?assertNotEqual(undefined, SessionId).
 
 set_value(_Config) ->
 	Req = #http_req{},
@@ -34,6 +34,9 @@ end_per_suite(_Config) ->
 
 
 %% mocked session store
+
+init([]) ->
+	{ok, {state}}.
 
 new(State, SessionId, Req) ->
 	{ok, State}.

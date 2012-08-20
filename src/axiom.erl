@@ -41,7 +41,10 @@ start(Handler, Options) ->
 -spec stop() -> ok.
 stop() ->
 	application:stop(cowboy),
-	application:unload(axiom).
+	case application:get_env(axiom, sessions) of
+		undefined -> application:unload(axiom);
+		_ -> application:stop(axiom)
+	end.
 
 -spec dtl(atom(), [tuple()]) -> iolist();
          (string(), [tuple()]) -> iolist().

@@ -20,7 +20,10 @@ new(State, SessionId, _Req) ->
 -spec set(#state{}, any(), any(), #http_req{}) -> {ok, #state{}}.
 set(State, Key, Value, Req) ->
 	{SessionId, _} = cowboy_http_req:cookie(<<"SessionId">>, Req),
-	[{SessionId, Session}] = ets:lookup(State#state.tid, SessionId),
+	Session = case ets:lookup(State#state.tid, SessionId) of
+		[{SessionId, Existing}] -> Existing;
+		[] -> []
+	end,
 	NewSession = lists:keystore(Key, 1, Session, {Key, Value}),
 	true = ets:insert(State#state.tid, {SessionId, NewSession}),
 	{ok, State}.

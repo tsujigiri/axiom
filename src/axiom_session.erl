@@ -17,7 +17,7 @@
 
 -spec start_link() -> {ok, pid()}.
 start_link() ->
-	case application:get_env(sessions) of
+	case application:get_env(axiom, sessions) of
 		undefined -> ignore;
 		{ok, Config} -> gen_server:start_link({local, ?MODULE}, ?MODULE, [Config], [])
 	end.

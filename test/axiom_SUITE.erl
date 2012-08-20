@@ -65,17 +65,24 @@ http_hello_static(Config) ->
 	{"HTTP/1.1",200,"OK"} = Status,
 	"<h1>It works!</h1>" = Body.
 
+http_set_and_get(Config) ->
+	{ok, {_Status, _Headers, _Body}} = httpc:request(base_url(Config) ++ "set"),
+	{ok, {_Status2, _Headers2, Body}} = httpc:request(base_url(Config) ++ "get"),
+	"bar" = Body.
+
 
 % suite
 
-all() -> [{group, with_defaults}, {group, with_options}, {group, static_files}].
+all() -> [{group, with_defaults}, {group, with_options}, {group, static_files},
+		{group, session_ets}].
 
 groups() -> [
 		{with_defaults, [],
 			[redirect, http_hello_world, http_not_found, http_post_with_params,
 				http_render_template, http_redirect, http_respond_with_iolist]},
 		{with_options, [], [http_hello_world]},
-		{static_files, [], [http_hello_static]}].
+		{static_files, [], [http_hello_static]},
+		{session_ets, [], [http_set_and_get]}].
 
 init_per_suite(Config) ->
 	inets:start(),
@@ -98,7 +105,13 @@ init_per_group(static_files, Config) ->
 	ok = file:write_file("public/html/index.html", "<h1>It works!</h1>"),
 	ok = file:write_file("public/ignored.html", "<h1>O NOES!</h1>"),
 	axiom:start(?MODULE),
-	Config.
+	Config;
+
+init_per_group(session_ets, Config) ->
+	Options = [{sessions, {axiom_session_ets, []}}],
+	axiom:start(?MODULE, Options),
+	Options ++ Config.
+
 
 end_per_group(with_defaults, _Config) ->
 	axiom:stop();
@@ -107,6 +120,9 @@ end_per_group(with_options, _Config) ->
 	axiom:stop();
 
 end_per_group(static_files, _Config) ->
+	axiom:stop();
+
+end_per_group(session_ets, _Config) ->
 	axiom:stop().
 
 % handlers
@@ -126,7 +142,15 @@ handle('GET', [<<"where">>, <<"are">>, <<"you">>], Request) ->
 	axiom:redirect("http://example.com/over/here", Request);
 
 handle('GET', [<<"iolist">>], _Request) ->
-	["I ", [<<"am">>], <<" ">>, ["an"], <<" iolist!">>].
+	["I ", [<<"am">>], <<" ">>, ["an"], <<" iolist!">>];
+
+handle('GET', [<<"set">>], Request) ->
+	axiom_session:set(<<"foo">>, <<"bar">>, Request),
+	<<"OK">>;
+
+handle('GET', [<<"get">>], Request) ->
+	Foo = axiom_session:get(<<"foo">>, Request),
+	Foo.
 
 % helpers
 
