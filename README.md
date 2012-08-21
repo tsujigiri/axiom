@@ -23,11 +23,16 @@ handle('GET', [<<"hi">>], _Request) ->
 This handles requests for `GET /hi` and returns "Hello world!".
 
 The third argument, given to the handler contains a record of type
-`http_req`, as known from Cowboy.
+`http_req`, [as known from Cowboy](https://github.com/extend/cowboy/blob/0c2e2224e372f01e6cf51a8e12d4856edb4cb8ac/include/http.hrl#L16).
+Include Cowboy's `http.hrl` if you want to use it:
 
-For convenience, the return value can be a binary string or iolist. To
-be more specific about the response, use the `response` record. For that
-to work you need to include Axiom's response header file:
+```erlang
+-include_lib("cowboy/include/http.hrl").
+```
+
+The return value can be a binary string or iolist. To be more specific
+about the response, use the `response` record. For that to work you
+need to include Axiom's response header file:
 
 ```erlang
 -include_lib("axiom/include/response.hrl").
