@@ -22,12 +22,17 @@ handle('GET', [<<"hi">>], _Request) ->
 
 This handles requests for `GET /hi` and returns "Hello world!".
 
-The third argument, given to the handler contains a proplist of things
-we know about the request, such as `params`, `headers` and many more.
+The third argument, given to the handler contains a record of type
+`http_req`, [as known from Cowboy](https://github.com/extend/cowboy/blob/0c2e2224e372f01e6cf51a8e12d4856edb4cb8ac/include/http.hrl#L16).
+Include Cowboy's `http.hrl` if you want to use it:
 
-For convenience, the return value can be a binary string or iolist. To
-be more specific about the response, use the `response` record. For that
-to work you need to include Axiom's response header file:
+```erlang
+-include_lib("cowboy/include/http.hrl").
+```
+
+The return value can be a binary string or iolist. To be more specific
+about the response, use the `response` record. For that to work you
+need to include Axiom's response header file:
 
 ```erlang
 -include_lib("axiom/include/response.hrl").
@@ -108,6 +113,47 @@ called.
 To see what else erlydtl can do for you, take a look at
 [its project page](https://code.google.com/p/erlydtl/).
 
+## Sessions
+
+Axiom comes with a basic session handler and ets based session store. To
+use it, add this tuple to the configuration proplist:
+
+```erlang
+{sessions, []}
+```
+
+In your handler you can then use
+`axiom_session:set(Key, Value, Request)` and
+`axiom_session:get(Key, Request)`.
+
+To set attributes for the cookie, storing the session ID, add some
+parameters to the session configuration in a tuple with the key
+`cookies`:
+
+```erlang
+{sessions, [{cookies, [param()]}]}
+```
+
+Possible parameters are:
+
+```erlang
+param() = {max_age, integer()} |
+		  {local_time, calendar:datetime()} |
+		  {domain, binary()} |
+		  {path, binary()} |
+		  {secure, true | false} |
+		  {http_only, true | false}
+```
+
+The default session store is the `axiom_session_ets` module. You can use
+your own by adding a `store` tuple to the sessions tuple:
+
+```erlang
+{sessions, [{store, my_session_store, []}]}
+```
+
+For implementation details take a look into the `axiom_session_ets`
+module.
 
 ## Configuration
 
