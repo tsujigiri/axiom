@@ -119,15 +119,41 @@ Axiom comes with a basic session handler and ets based session store. To
 use it, add this tuple to the configuration proplist:
 
 ```erlang
-{sessions, {axiom_session_ets, []}}
+{sessions, []}
 ```
-
-`axiom_session_ets` is the session store module and can be easily
-replaced by your own. To see how, just look into that module.
 
 In your handler you can then use
 `axiom_session:set(Key, Value, Request)` and
 `axiom_session:get(Key, Request)`.
+
+To set attributes for the cookie, storing the session ID, add some
+parameters to the session configuration in a tuple with the key
+`cookies`:
+
+```erlang
+{sessions, [{cookies, [param()]}]}
+```
+
+Possible parameters are:
+
+```erlang
+param() = {max_age, integer()} |
+		  {local_time, calendar:datetime()} |
+		  {domain, binary()} |
+		  {path, binary()} |
+		  {secure, true | false} |
+		  {http_only, true | false}
+```
+
+The default session store is the `axiom_session_ets` module. You can use
+your own by adding a `store` tuple to the sessions tuple:
+
+```erlang
+{sessions, [{store, my_session_store, []}]}
+```
+
+For implementation details take a look into the `axiom_session_ets`
+module.
 
 ## Configuration
 
