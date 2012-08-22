@@ -56,7 +56,7 @@ don't need to specify every one of them:
 ```
 
 
-### Static Files
+## Static Files
 
 Static files are served via the `cowboy_http_static` handler. By
 default, every directory in your application's `./public` directory
@@ -73,7 +73,7 @@ When you use this feature, it is advisable to start Erlang with the
 Rule of thumb is to use your machine's number of CPU cores.
 
 
-### Redirects
+## Redirects
 
 You can redirect requests with `redirect/2`:
 
@@ -85,7 +85,7 @@ handle('GET', [<<"bar">>], Request) ->
 	<<"<h1>Welcome back!</h1>">>.
 ```
 
-### Templates
+## Templates
 
 Axiom comes with [Django](https://github.com/django/django) template
 support via [erlydtl](https://github.com/evanmiller/erlydtl). To make
