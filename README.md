@@ -43,9 +43,9 @@ headers:
 
 ```erlang
 handle('GET', [<<"foo">>], _Request) ->
-	Response = #response{},
-	Headers = Response#response.headers ++ [{'Set-Cookie', "ping=pong"}],
-	#response{headers = Headers, body = <<"Go away!">>}.
+	Resp = #response{},
+	Headers = lists:keystore(<<"X-My-Header">>, 1, Resp, {<<"X-My-Header">>, <<"O HAI!">>}),
+	#response{headers = Headers, body = <<"<h1>It works!</h1>">>}.
 ```
 
 The `response` record defines sane defaults for all the fields, so you
