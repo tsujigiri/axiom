@@ -19,7 +19,7 @@
 start_link() ->
 	case application:get_env(axiom, sessions) of
 		undefined -> ignore;
-		{ok, Config} -> gen_server:start_link({local, ?MODULE}, ?MODULE, [Config], [])
+		{ok, Config} -> gen_server:start_link({local, ?MODULE}, ?MODULE, Config, [])
 	end.
 
 -spec new(#http_req{}) -> {ok, #http_req{}}.
@@ -29,7 +29,7 @@ new(Req) ->
 		{ok, _Config} -> 
 			{SessionId, _} = cowboy_http_req:cookie(<<"SessionId">>, Req, new_id()),
 			{ok, Req2} = cowboy_http_req:set_resp_cookie(
-					<<"SessionId">>, SessionId, [], Req),
+					<<"SessionId">>, SessionId, cookie_attributes(), Req),
 			Meta = lists:keystore(session_id, 1, Req2#http_req.meta, {session_id, SessionId}),
 			Req3 = Req2#http_req{meta = Meta},
 			ok = gen_server:call(?MODULE, {new, [SessionId, Req3]}),
@@ -51,10 +51,12 @@ delete(Req) ->
 
 %% CALLBACKS
 
--spec init([{module(), [tuple()]}]) -> {ok, #state{}}.
-init([Config]) ->
-	SessionStore = element(1, Config),
-	SessionConf = element(2, Config),
+-spec init([tuple()]) -> {ok, #state{}}.
+init(Config) ->
+	{store, SessionStore, SessionConf} = case proplists:lookup(store, Config) of
+		none -> {store, axiom_session_ets, []};
+		Else -> Else
+	end,
 	{ok, SessionState} = SessionStore:init(SessionConf),
 	{ok, #state{session_state = SessionState, session_store = SessionStore}}.
 
@@ -84,4 +86,9 @@ new_id() ->
 	Data = term_to_binary([make_ref(), now()]),
 	Sha = binary:decode_unsigned(crypto:sha(Data)),
 	list_to_binary(lists:flatten(io_lib:format("~40.16.0b", [Sha]))).
+
+cookie_attributes() ->
+	{ok, Config} = application:get_env(axiom, sessions),
+	Attrs = proplists:get_value(cookies, Config, []),
+	lists:keystore(path, 1, Attrs, {path, <<"/">>}).
 

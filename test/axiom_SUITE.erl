@@ -108,7 +108,7 @@ init_per_group(static_files, Config) ->
 	Config;
 
 init_per_group(session_ets, Config) ->
-	Options = [{sessions, {axiom_session_ets, []}}],
+	Options = [{sessions, []}],
 	axiom:start(?MODULE, Options),
 	Options ++ Config.
 

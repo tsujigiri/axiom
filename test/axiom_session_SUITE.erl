@@ -25,7 +25,7 @@ get_value(_Config) ->
 %% callbacks
 
 init_per_suite(Config) ->
-	axiom:start(?MODULE, [{sessions, {?MODULE, []}}]),
+	axiom:start(?MODULE, [{sessions, [{store, ?MODULE, []}]}]),
 	Config.
 
 end_per_suite(_Config) ->
