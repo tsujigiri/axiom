@@ -104,7 +104,12 @@ handle(Req, State) ->
 		process_response(Handler:handle(Method, Path, Req2))
 	catch
 		error:function_clause ->
-			#response{status = 404, body = <<"<h1>404 - Not Found</h1>">>}
+			% only catch function_clause errors for Handler:handle
+			case erlang:get_stacktrace() of
+				[{Handler, handle, _, _} | _] ->
+					#response{status = 404, body = <<"<h1>404 - Not Found</h1>">>};
+				Trace -> erlang:raise(error, function_clause, Trace)
+			end
 	end,
 	{ok, Req3} = cowboy_http_req:reply(Resp#response.status,
 		Resp#response.headers, Resp#response.body, Req2),
