@@ -27,7 +27,10 @@ new(Req) ->
 	case application:get_env(axiom, sessions) of
 		undefined -> Req;
 		{ok, _Config} -> 
-			{SessionId, _} = cowboy_http_req:cookie(<<"SessionId">>, Req, new_id()),
+			SessionId = case cowboy_http_req:cookie(<<"SessionId">>, Req) of
+				{undefined, _} -> new_id();
+				{ExistingId, _} -> ExistingId
+			end,
 			{ok, Req2} = cowboy_http_req:set_resp_cookie(
 					<<"SessionId">>, SessionId, cookie_attributes(), Req),
 			Meta = lists:keystore(session_id, 1, Req2#http_req.meta, {session_id, SessionId}),
@@ -83,7 +86,7 @@ code_change(_OldVsn, State, _Extra) ->
 
 -spec new_id() -> binary().
 new_id() ->
-	Data = term_to_binary([make_ref(), now()]),
+	Data = term_to_binary([make_ref(), now(), random:uniform()]),
 	Sha = binary:decode_unsigned(crypto:sha(Data)),
 	list_to_binary(lists:flatten(io_lib:format("~40.16.0b", [Sha]))).
 

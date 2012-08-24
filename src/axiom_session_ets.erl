@@ -19,7 +19,7 @@ new(State, SessionId, _Req) ->
 
 -spec set(#state{}, any(), any(), #http_req{}) -> {ok, #state{}}.
 set(State, Key, Value, Req) ->
-	{SessionId, _} = cowboy_http_req:cookie(<<"SessionId">>, Req),
+	{SessionId, _} = cowboy_http_req:meta(session_id, Req),
 	Session = case ets:lookup(State#state.tid, SessionId) of
 		[{SessionId, Existing}] -> Existing;
 		[] -> []
@@ -30,7 +30,7 @@ set(State, Key, Value, Req) ->
 
 -spec get(#state{}, any(), #http_req{}) -> {any(), #state{}}.
 get(State, Key, Req) ->
-	{SessionId, _} = cowboy_http_req:cookie(<<"SessionId">>, Req),
+	{SessionId, _} = cowboy_http_req:meta(session_id, Req),
 	Value = case ets:lookup(State#state.tid, SessionId) of
 		[] -> undefined;
 		[{_, Session}] -> proplists:get_value(Key, Session)
@@ -39,7 +39,7 @@ get(State, Key, Req) ->
 
 -spec delete(#state{}, #http_req{}) -> {ok, #state{}}.
 delete(State, Req) ->
-	{SessionId, _} = cowboy_http_req:cookie(<<"SessionId">>, Req),
+	{SessionId, _} = cowboy_http_req:meta(session_id, Req),
 	true = ets:delete(State#state.tid, SessionId),
 	{ok, State}.
 

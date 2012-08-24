@@ -109,6 +109,7 @@ init_per_group(static_files, Config) ->
 
 init_per_group(session_ets, Config) ->
 	Options = [{sessions, []}],
+	ok = httpc:set_options([{cookies, enabled}]),
 	axiom:start(?MODULE, Options),
 	Options ++ Config.
 
