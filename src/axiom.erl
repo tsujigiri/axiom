@@ -4,7 +4,7 @@
 -export([init/3, handle/2, terminate/2]).
 
 % api
--export([start/1, start/2, stop/0, params/1, dtl/2, redirect/2]).
+-export([start/1, start/2, stop/0, params/1, param/2, dtl/2, redirect/2]).
 
 -record(state, {handler}).
 
@@ -90,6 +90,9 @@ params(Req) ->
 	element(1, cowboy_http_req:body_qs(Req)) ++
 	element(1, cowboy_http_req:qs_vals(Req)).
 
+-spec param(binary(), #http_req{}) -> binary().
+param(Param, Req) ->
+	proplists:get_value(Param, params(Req)).
 
 
 %% CALLBACKS
