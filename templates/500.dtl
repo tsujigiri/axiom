@@ -1,0 +1,14 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+  	<meta http-equiv="content-type" content="text/html; charset=utf-8">
+  	<title>500 - Internal Server Error - Axiom</title>
+  </head>
+	<body>
+    <h1>Something went wrong.</h1>
+	<p>{{error}}:{{reason}}</p>
+    <pre>
+      {{stacktrace}}
+    </pre>
+	</body>
+</html>
