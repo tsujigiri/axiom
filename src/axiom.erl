@@ -4,7 +4,7 @@
 -export([init/3, handle/2, terminate/2]).
 
 % api
--export([start/1, start/2, stop/0, params/1, param/2, dtl/2, redirect/2]).
+-export([start/1, start/2, stop/0, params/1, param/2, dtl/1, dtl/2, redirect/2]).
 
 -record(state, {handler}).
 
@@ -45,6 +45,11 @@ stop() ->
 		undefined -> application:unload(axiom);
 		_ -> application:stop(axiom)
 	end.
+
+-spec dtl(atom()) -> iolist();
+         (string()) -> iolist().
+dtl(Template) ->
+	dtl(Template, []).
 
 -spec dtl(atom(), [tuple()]) -> iolist();
          (string(), [tuple()]) -> iolist().
@@ -99,24 +104,28 @@ param(Param, Req) ->
 
 -spec handle(#http_req{}, #state{}) -> {ok, #http_req{}, #state{}}.
 handle(Req, State) ->
-	Req2 = axiom_session:new(Req),
-	Method = Req2#http_req.method,
-	Path = Req2#http_req.path,
 	Handler = State#state.handler,
-	Resp = try
-		process_response(Handler:handle(Method, Path, Req2))
-	catch
-		error:function_clause ->
-			% only catch function_clause errors for Handler:handle
-			case erlang:get_stacktrace() of
-				[{Handler, handle, _, _} | _] ->
-					#response{status = 404, body = <<"<h1>404 - Not Found</h1>">>};
-				Trace -> erlang:raise(error, function_clause, Trace)
-			end
+	Method = Req#http_req.method,
+	Path = Req#http_req.path,
+	{ok, FinalReq} = try
+		Req2 = axiom_session:new(Req),
+		Resp = process_response(Handler:handle(Method, Path, Req2)),
+		cowboy_http_req:reply(Resp#response.status,
+			Resp#response.headers, Resp#response.body, Req2)
+	catch Error:Reason ->
+		Headers = (#response{})#response.headers,
+		case {Error, Reason, erlang:get_stacktrace()} of
+			{error, function_clause, [{Handler, handle, _, _}|_]} ->
+				% function_clause errors for Handler:handle are 404
+				cowboy_http_req:reply(404, Headers, dtl('404'), Req);
+			{_, _, Stacktrace} -> 
+				% everything else is 500
+				cowboy_http_req:reply(500, Headers, dtl('500',
+					[{error, Error}, {reason, io_lib:format("~p", [Reason])},
+						{stacktrace, io_lib:format("~p", [Stacktrace])}]), Req)
+		end
 	end,
-	{ok, Req3} = cowboy_http_req:reply(Resp#response.status,
-		Resp#response.headers, Resp#response.body, Req2),
-	{ok, Req3, State}.
+	{ok, FinalReq, State}.
 
 
 -spec init({tcp, http}, #http_req{}, [module()]) -> {ok, #http_req{}, #state{}}.

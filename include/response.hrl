@@ -1,1 +1,1 @@
--record(response, {status = 200, headers = [{'Content-Type', "text/html"}], body = <<>>}).
+-record(response, {status = 200, headers = [{'Content-Type', <<"text/html">>}], body = <<>>}).
