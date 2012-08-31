@@ -117,12 +117,13 @@ handle(Req, State) ->
 		case {Error, Reason, erlang:get_stacktrace()} of
 			{error, function_clause, [{Handler, handle, _, _}|_]} ->
 				% function_clause errors for Handler:handle are 404
-				cowboy_http_req:reply(404, Headers, dtl('404'), Req);
+				cowboy_http_req:reply(404, Headers,
+					dtl('404', [{path, io_lib:format("~p", [Path])}]), Req);
 			{_, _, Stacktrace} -> 
 				% everything else is 500
 				cowboy_http_req:reply(500, Headers, dtl('500',
 					[{error, Error}, {reason, io_lib:format("~p", [Reason])},
-						{stacktrace, io_lib:format("~p", [Stacktrace])}]), Req)
+						{stacktrace, format_stacktrace(Stacktrace)}]), Req)
 		end
 	end,
 	{ok, FinalReq, State}.
@@ -186,4 +187,12 @@ static_dispatch() ->
 				}
 		end, Dirs).
 
+
+format_stacktrace([]) ->
+	[];
+
+format_stacktrace([H|Stacktrace]) ->
+    {M,F,Arity,[{file, File}, {line, Line}]} = H,
+    [io_lib:format("~s:~p: in ~p:~p/~p", [File, Line, M, F, Arity]) |
+		format_stacktrace(Stacktrace)].
 

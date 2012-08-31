@@ -34,7 +34,7 @@ http_post_with_params(Config) ->
 http_not_found(Config) ->
 	{ok, {Status, _Headers, Body}} =
 		httpc:request(base_url(Config) ++ "do/not/find"),
-	%"<h1>404 - Not Found</h1>" = Body,
+    true = string:str(Body, "Not Found") > 0,
 	{"HTTP/1.1",404,"Not Found"} = Status.
 
 http_render_template(Config) ->

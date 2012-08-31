@@ -2,13 +2,25 @@
 <html>
   <head>
   	<meta http-equiv="content-type" content="text/html; charset=utf-8">
-  	<title>500 - Internal Server Error - Axiom</title>
+    <style type="text/css">
+      body {
+        color: #999999;
+        font-family: sans-serif;
+        font-size: large;
+      }
+      div#content {
+        width: 500px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+    </style> 
   </head>
-	<body>
-    <h1>Something went wrong.</h1>
-	<p>{{error}}:{{reason}}</p>
-    <pre>
-      {{stacktrace}}
-    </pre>
+  <body>
+    <div id="content">
+      <h1>Something went wrong.</h1>
+      <p>{{error}}:{{reason}}</p>
+      <pre>{% for line in stacktrace %}{{line}}
+{% endfor %}</pre>
+    </div>
 	</body>
 </html>
