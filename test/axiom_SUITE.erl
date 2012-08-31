@@ -37,6 +37,13 @@ http_not_found(Config) ->
     true = string:str(Body, "Not Found") > 0,
 	{"HTTP/1.1",404,"Not Found"} = Status.
 
+http_500(Config) ->
+	{ok, {Status, _Headers, Body}} =
+		httpc:request(base_url(Config) ++ "fail"),
+    true = string:str(Body, "Something went wrong.") > 0,
+	{"HTTP/1.1",500,"Internal Server Error"} = Status.
+
+
 http_render_template(Config) ->
 	file:make_dir("templates"),
 	Template = "templates/my_template.dtl",
@@ -79,7 +86,8 @@ all() -> [{group, with_defaults}, {group, with_options}, {group, static_files},
 groups() -> [
 		{with_defaults, [],
 			[redirect, http_hello_world, http_not_found, http_post_with_params,
-				http_render_template, http_redirect, http_respond_with_iolist]},
+				http_render_template, http_redirect, http_respond_with_iolist,
+				http_500]},
 		{with_options, [], [http_hello_world]},
 		{static_files, [], [http_hello_static]},
 		{session_ets, [], [http_set_and_get]}].
@@ -151,7 +159,10 @@ handle('GET', [<<"set">>], Request) ->
 
 handle('GET', [<<"get">>], Request) ->
 	Foo = axiom_session:get(<<"foo">>, Request),
-	Foo.
+	Foo;
+
+handle('GET', [<<"fail">>], Request) ->
+	foo = bar.
 
 % helpers
 
