@@ -23,8 +23,8 @@ start(Handler) ->
 start(Handler, Options) ->
 	application:load(axiom),
 	lists:map(fun({K,V}) -> application:set_env(?MODULE, K, V) end, Options),
-	{ok, Host} = application:get_env(axiom, host),
-	{ok, Path} = application:get_env(axiom, path),
+	{ok, Host} = application:get_env(?MODULE, host),
+	{ok, Path} = application:get_env(?MODULE, path),
 	Dispatch = [{Host, static_dispatch() ++ [{Path, ?MODULE, [Handler]}]}],
 	ok = application:start(cowboy),
 	ok = case application:get_env(axiom, sessions) of
@@ -38,6 +38,7 @@ start(Handler, Options) ->
 		cowboy_http_protocol, [{dispatch, Dispatch}]
 	).
 
+
 -spec stop() -> ok.
 stop() ->
 	application:stop(cowboy),
@@ -45,6 +46,7 @@ stop() ->
 		undefined -> application:unload(axiom);
 		_ -> application:stop(axiom)
 	end.
+
 
 -spec dtl(atom()) -> iolist();
          (string()) -> iolist().
@@ -60,6 +62,7 @@ dtl(Template, Params) when is_list(Template) ->
 	{ok, Response} =
 		apply(list_to_atom(Template ++ "_dtl"), render, [atomify_keys(Params)]),
 	Response.
+
 
 -spec redirect(string(), #http_req{}) -> #response{}.
 redirect(UrlOrPath, Req) ->
@@ -90,6 +93,7 @@ redirect(UrlOrPath, Req) ->
 	#response{status = Status,
 		headers = [{'Location', binary_to_list(iolist_to_binary(Url))}]}.
 
+
 -spec params(#http_req{}) -> [tuple()].
 params(Req) ->
 	element(1, cowboy_http_req:body_qs(Req)) ++
@@ -107,25 +111,29 @@ handle(Req, State) ->
 	Handler = State#state.handler,
 	Method = Req#http_req.method,
 	Path = Req#http_req.path,
-	{ok, FinalReq} = try
-		Req2 = axiom_session:new(Req),
-		Resp = process_response(Handler:handle(Method, Path, Req2)),
-		cowboy_http_req:reply(Resp#response.status,
-			Resp#response.headers, Resp#response.body, Req2)
+	Req2 = axiom_session:new(Req),
+	Resp = try
+		process_response(Handler:handle(Method, Path, Req2))
 	catch Error:Reason ->
-		Headers = (#response{})#response.headers,
 		case {Error, Reason, erlang:get_stacktrace()} of
 			{error, function_clause, [{Handler, handle, _, _}|_]} ->
 				% function_clause errors for Handler:handle are 404
-				cowboy_http_req:reply(404, Headers,
-					dtl('404', [{path, io_lib:format("~p", [Path])}]), Req);
+				#response{status = 404, body = dtl(axiom_error_404,
+						[{path, io_lib:format("~p", [Path])}])};
 			{_, _, Stacktrace} -> 
 				% everything else is 500
-				cowboy_http_req:reply(500, Headers, dtl('500',
-					[{error, Error}, {reason, io_lib:format("~p", [Reason])},
-						{stacktrace, format_stacktrace(Stacktrace)}]), Req)
+				case erlang:function_exported(Handler, error, 1) of
+					true -> process_response(Handler:error(Req), 500);
+					false -> #response{status = 500, body = dtl(axiom_error_500, [
+							{error, Error},
+							{reason, io_lib:format("~p", [Reason])},
+							{stacktrace, format_stacktrace(Stacktrace)}
+						])}
+				end
 		end
 	end,
+	{ok, FinalReq} = cowboy_http_req:reply(Resp#response.status,
+		Resp#response.headers, Resp#response.body, Req2),
 	{ok, FinalReq, State}.
 
 
@@ -148,6 +156,15 @@ process_response(Resp = #response{}) ->
 
 process_response(Resp) when is_binary(Resp); is_list(Resp) ->
 	#response{body=Resp}.
+
+
+-spec process_response(#response{}, non_neg_integer()) -> #response{};
+                      (iolist(), non_neg_integer()) -> #response{}.
+process_response(Resp = #response{}, _Status) ->
+	Resp;
+
+process_response(Resp, Status) when is_binary(Resp); is_list(Resp) ->
+	#response{status = Status, body = Resp}.
 
 
 -spec atomify_keys([]) -> [];
@@ -177,14 +194,14 @@ static_dispatch() ->
 				FileInfo#file_info.type == directory
 		end, Files),
 	lists:map(fun(Dir) ->
-				{
-					[list_to_binary(Dir), '...'],
-					cowboy_http_static,
-					[
-						{directory, [list_to_binary(PubDir), list_to_binary(Dir)]},
-						{mimetypes, {fun mimetypes:path_to_mimes/2, default}}
-					]
-				}
+			{
+				[list_to_binary(Dir), '...'],
+				cowboy_http_static,
+				[
+					{directory, [list_to_binary(PubDir), list_to_binary(Dir)]},
+					{mimetypes, {fun mimetypes:path_to_mimes/2, default}}
+				]
+			}
 		end, Dirs).
 
 
@@ -192,7 +209,15 @@ format_stacktrace([]) ->
 	[];
 
 format_stacktrace([H|Stacktrace]) ->
-    {M,F,Arity,[{file, File}, {line, Line}]} = H,
-    [io_lib:format("~s:~p: in ~p:~p/~p", [File, Line, M, F, Arity]) |
+    {M, F, A, Location} = H,
+	Line = case proplists:get_value(line, Location) of
+		undefined -> "";
+		Else -> io_lib:format("~p: ", [Else])
+	end,
+	File = case proplists:get_value(file, Location) of
+		undefined -> "";
+		Else2 -> Else2 ++ ":"
+	end,
+	[io_lib:format("~s~s in ~p:~p/~p", [File, Line, M, F, A]) |
 		format_stacktrace(Stacktrace)].
 

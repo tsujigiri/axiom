@@ -55,6 +55,27 @@ don't need to specify every one of them:
 -record(response, {status = 200, headers = [{'Content-Type', "text/html"}], body = <<"">>}).
 ```
 
+To get the request parameters out of the request, you can use the two
+handy functions `axiom:params(Req)` and `axiom:params(Name, Req)`.
+The first returns a proplist of all parameters, the second one returns
+the named parameter's value.
+
+
+## Configuration
+
+`axiom:start/1` has a bigger brother called `axiom:start/2`, taking a
+proplist as the second argument. Possible properties and their defaults
+are as follows:
+
+```erlang
+[
+	{nb_acceptors: 100},		% acceptor pool size
+	{host, '_'},				% host IP
+	{port, 7654},				% host port
+	{public, "public"}			% custom path for static files
+]
+```
+
 
 ## Static Files
 
@@ -155,20 +176,27 @@ your own by adding a `store` tuple to the sessions tuple:
 For implementation details take a look into the `axiom_session_ets`
 module.
 
-## Configuration
+## Errors
 
-`axiom:start/1` has a bigger brother called `axiom:start/2`, taking a
-proplist as the second argument. Possible properties and their defaults
-are as follows:
+### Not Found
+
+To overwrite Axiom's response to 404 errors, just create a catch-all
+handler:
 
 ```erlang
-[
-	{nb_acceptors: 100},		% acceptor pool size
-	{host, '_'},				% host IP
-	{port, 7654},				% host port
-	{public, "public"}		% custom path for static files
-]
+handle(_Method, _Path, _Req) ->
+	#response{status = 404, body = <<"nope.">>}.
 ```
+
+Note that you have to take care of the status code yourself, as
+otherwise the default of 200 is sent back to the client.
+
+### Internal Server Error
+
+To handle these yourself, you can implement a function named `error/1`.
+The argument is the `http_req` record, otherwise it works like the
+handler function, only with a default status code of 500.
+
 
 ## Installation
 

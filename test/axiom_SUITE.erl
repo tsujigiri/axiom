@@ -43,6 +43,11 @@ http_500(Config) ->
     true = string:str(Body, "Something went wrong.") > 0,
 	{"HTTP/1.1",500,"Internal Server Error"} = Status.
 
+http_custom_500(Config) ->
+	{ok, {Status, _Headers, Body}} =
+		httpc:request(base_url(Config) ++ "fails"),
+	{"HTTP/1.1",500,"Internal Server Error"} = Status,
+	"custom 500 message" = Body.
 
 http_render_template(Config) ->
 	file:make_dir("templates"),
@@ -81,7 +86,7 @@ http_set_and_get(Config) ->
 % suite
 
 all() -> [{group, with_defaults}, {group, with_options}, {group, static_files},
-		{group, session_ets}].
+		{group, session_ets}, {group, with_custom_500}].
 
 groups() -> [
 		{with_defaults, [],
@@ -90,7 +95,9 @@ groups() -> [
 				http_500]},
 		{with_options, [], [http_hello_world]},
 		{static_files, [], [http_hello_static]},
-		{session_ets, [], [http_set_and_get]}].
+		{session_ets, [], [http_set_and_get]},
+		{with_custom_500, [], [http_custom_500]}
+	].
 
 init_per_suite(Config) ->
 	inets:start(),
@@ -119,7 +126,11 @@ init_per_group(session_ets, Config) ->
 	Options = [{sessions, []}],
 	ok = httpc:set_options([{cookies, enabled}]),
 	axiom:start(?MODULE, Options),
-	Options ++ Config.
+	Options ++ Config;
+
+init_per_group(with_custom_500, Config) ->
+	axiom:start(axiom_error_test_app),
+	Config.
 
 
 end_per_group(with_defaults, _Config) ->
@@ -132,7 +143,11 @@ end_per_group(static_files, _Config) ->
 	axiom:stop();
 
 end_per_group(session_ets, _Config) ->
+	axiom:stop();
+
+end_per_group(with_custom_500, _Config) ->
 	axiom:stop().
+
 
 % handlers
 
