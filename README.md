@@ -195,7 +195,7 @@ otherwise the default of 200 is sent back to the client.
 
 To handle these yourself, you can implement a function named `error/1`.
 The argument is the `http_req` record, otherwise it works like the
-handler function, only with a default status code of 500.
+`handle` function, only with a default status code of 500.
 
 
 ## Installation
