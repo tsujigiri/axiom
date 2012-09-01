@@ -56,7 +56,7 @@ don't need to specify every one of them:
 ```
 
 To get the request parameters out of the request, you can use the two
-handy functions `axiom:params(Req)` and `axiom:params(Name, Req)`.
+handy functions `axiom:params(Req)` and `axiom:param(Name, Req)`.
 The first returns a proplist of all parameters, the second one returns
 the named parameter's value.
 
