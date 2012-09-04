@@ -176,6 +176,25 @@ your own by adding a `store` tuple to the sessions tuple:
 For implementation details take a look into the `axiom_session_ets`
 module.
 
+## Filters
+
+The functions `before_filter/1` and `after_filter/2` can be implemented
+to deal with the `http_req` and (in the `after_filter`) the `response`
+records. When implemented, these are called no matter which `handle/3`
+matches the request.
+
+In your handler module:
+
+```erlang
+before_filter(Req) ->
+	% do stuff
+	Req.
+
+after_filter(Resp, Req) ->
+	% do more stuff
+	{Resp, Req}.
+```
+
 ## Errors
 
 ### Not Found
@@ -205,7 +224,7 @@ To use it in your OTP application, add this to your `rebar.config`:
 ```erlang
 {lib_dirs, ["deps"]}.
 {deps, [
-	{'axiom', "0.0.9", {git, "git://github.com/tsujigiri/axiom.git", {tag, "v0.0.9"}}}
+	{'axiom', "0.0.10", {git, "git://github.com/tsujigiri/axiom.git", {tag, "v0.0.10"}}}
 ]}.
 ```
 

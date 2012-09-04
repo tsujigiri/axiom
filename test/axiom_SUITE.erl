@@ -82,11 +82,16 @@ http_set_and_get(Config) ->
 	{ok, {_Status2, _Headers2, Body}} = httpc:request(base_url(Config) ++ "get"),
 	"bar" = Body.
 
+http_with_filters(Config) ->
+	{ok, {Status, _Headers, Body}} = httpc:request(base_url(Config)),
+	{"HTTP/1.1",200,"OK"} = Status,
+	"It works!" = Body.
+
 
 % suite
 
 all() -> [{group, with_defaults}, {group, with_options}, {group, static_files},
-		{group, session_ets}, {group, with_custom_500}].
+		{group, session_ets}, {group, with_custom_500}, {group, with_filters}].
 
 groups() -> [
 		{with_defaults, [],
@@ -96,7 +101,8 @@ groups() -> [
 		{with_options, [], [http_hello_world]},
 		{static_files, [], [http_hello_static]},
 		{session_ets, [], [http_set_and_get]},
-		{with_custom_500, [], [http_custom_500]}
+		{with_custom_500, [], [http_custom_500]},
+		{with_filters, [], [http_with_filters]}
 	].
 
 init_per_suite(Config) ->
@@ -130,8 +136,11 @@ init_per_group(session_ets, Config) ->
 
 init_per_group(with_custom_500, Config) ->
 	axiom:start(axiom_error_test_app),
-	Config.
+	Config;
 
+init_per_group(with_filters, Config) ->
+	axiom:start(axiom_app_with_filters),
+	Config.
 
 end_per_group(with_defaults, _Config) ->
 	axiom:stop();
@@ -146,8 +155,10 @@ end_per_group(session_ets, _Config) ->
 	axiom:stop();
 
 end_per_group(with_custom_500, _Config) ->
-	axiom:stop().
+	axiom:stop();
 
+end_per_group(with_filters, _Config) ->
+	axiom:stop().
 
 % handlers
 

@@ -18,7 +18,7 @@
   <body>
     <div id="content">
       <h1>Something went wrong.</h1>
-      <p>{{error}}:{{reason}}</p>
+      <p>{{error}}: {{reason}}</p>
       <pre>{% for line in stacktrace %}{{line}}
 {% endfor %}</pre>
     </div>

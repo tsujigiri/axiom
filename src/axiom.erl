@@ -109,32 +109,15 @@ param(Param, Req) ->
 -spec handle(#http_req{}, #state{}) -> {ok, #http_req{}, #state{}}.
 handle(Req, State) ->
 	Handler = State#state.handler,
-	Method = Req#http_req.method,
-	Path = Req#http_req.path,
-	Req2 = axiom_session:new(Req),
-	Resp = try
-		process_response(Handler:handle(Method, Path, Req2))
+	{Resp, Req3} = try
+		Req2 = axiom_session:new(Req),
+		call_handler(Handler, Req2)
 	catch Error:Reason ->
-		case {Error, Reason, erlang:get_stacktrace()} of
-			{error, function_clause, [{Handler, handle, _, _}|_]} ->
-				% function_clause errors for Handler:handle are 404
-				#response{status = 404, body = dtl(axiom_error_404,
-						[{path, io_lib:format("~p", [Path])}])};
-			{_, _, Stacktrace} -> 
-				% everything else is 500
-				case erlang:function_exported(Handler, error, 1) of
-					true -> process_response(Handler:error(Req), 500);
-					false -> #response{status = 500, body = dtl(axiom_error_500, [
-							{error, Error},
-							{reason, io_lib:format("~p", [Reason])},
-							{stacktrace, format_stacktrace(Stacktrace)}
-						])}
-				end
-		end
+		handle_error(Error, Reason, erlang:get_stacktrace(), Handler, Req)
 	end,
-	{ok, FinalReq} = cowboy_http_req:reply(Resp#response.status,
-		Resp#response.headers, Resp#response.body, Req2),
-	{ok, FinalReq, State}.
+	{ok, Req4} = cowboy_http_req:reply(Resp#response.status,
+		Resp#response.headers, Resp#response.body, Req3),
+	{ok, Req4, State}.
 
 
 -spec init({tcp, http}, #http_req{}, [module()]) -> {ok, #http_req{}, #state{}}.
@@ -148,6 +131,43 @@ terminate(_Req, _State) ->
 
 
 %% INTERNAL FUNCTIONS
+
+
+-spec call_handler(module(), #http_req{}) -> {#response{}, #http_req{}}.
+call_handler(Handler, Req) ->
+	Method = Req#http_req.method,
+	Path = Req#http_req.path,
+	Req2 = case erlang:function_exported(Handler, before_filter, 1) of
+		true -> Handler:before_filter(Req);
+		false -> Req
+	end,
+	Resp = process_response(Handler:handle(Method, Path, Req2)),
+	{Resp2, Req3} = case erlang:function_exported(Handler, after_filter, 1) of
+		true -> Handler:after_filter(Resp, Req2);
+		false -> {Resp, Req2}
+	end,
+	{#response{}, #http_req{}} = {Resp2, Req3}.
+
+
+-spec handle_error(error, function_clause, [tuple()], module(), #http_req{}) -> {#response{}, #http_req{}};
+                  (atom(), any(), [tuple()], module(), #http_req{}) -> {#response{}, #http_req{}}.
+handle_error(error, function_clause, [{Handler, handle, _, _}|_], Handler, Req) ->
+	Path = Req#http_req.path,
+	Resp = #response{status = 404,
+		body = dtl(axiom_error_404, [{path, io_lib:format("~p", [Path])}])},
+	{Resp, Req};
+
+handle_error(Error, Reason, Stacktrace, Handler, Req) ->
+	Resp = case erlang:function_exported(Handler, error, 1) of
+		true -> process_response(Handler:error(Req), 500);
+		false -> #response{status = 500, body = dtl(axiom_error_500, [
+				{error, Error},
+				{reason, io_lib:format("~p", [Reason])},
+				{stacktrace, format_stacktrace(Stacktrace)}
+			])}
+	end,
+	{Resp, Req}.
+
 
 -spec process_response(#response{}) -> #response{};
                       (iolist()) -> #response{}.
