@@ -124,7 +124,6 @@ init_per_group(static_files, Config) ->
 	ok = file:make_dir("public"),
 	ok = file:make_dir("public/html"),
 	ok = file:write_file("public/html/index.html", "<h1>It works!</h1>"),
-	ok = file:write_file("public/ignored.html", "<h1>O NOES!</h1>"),
 	axiom:start(?MODULE),
 	Config;
 
@@ -149,6 +148,9 @@ end_per_group(with_options, _Config) ->
 	axiom:stop();
 
 end_per_group(static_files, _Config) ->
+	ok = file:delete("public/html/index.html"),
+	ok = file:del_dir("public/html"),
+	ok = file:del_dir("public"),
 	axiom:stop();
 
 end_per_group(session_ets, _Config) ->
@@ -187,7 +189,7 @@ handle('GET', [<<"get">>], Request) ->
 	Foo = axiom_session:get(<<"foo">>, Request),
 	Foo;
 
-handle('GET', [<<"fail">>], Request) ->
+handle('GET', [<<"fail">>], _Request) ->
 	foo = bar.
 
 % helpers
