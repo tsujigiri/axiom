@@ -38,11 +38,11 @@ end_per_suite(_Config) ->
 init([]) ->
 	{ok, {state}}.
 
-new(State, SessionId, Req) ->
+new(State, _SessionId, _Req) ->
 	{ok, State}.
 
-set(State, <<"key">>, <<"value">>, Req) ->
+set(State, <<"key">>, <<"value">>, _Req) ->
 	{ok, State}.
 
-get(State, <<"key">>, Req) ->
+get(State, <<"key">>, _Req) ->
 	{<<"value">>, State}.

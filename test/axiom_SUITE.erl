@@ -90,8 +90,8 @@ http_with_filters(Config) ->
 
 % suite
 
-all() -> [{group, with_defaults}, {group, with_options}, {group, static_files},
-		{group, session_ets}, {group, with_custom_500}, {group, with_filters}].
+all() -> [{group, with_defaults}, {group, with_options}, {group, session_ets},
+		  {group, with_custom_500}, {group, with_filters}, {group, static_files}].
 
 groups() -> [
 		{with_defaults, [],
@@ -135,7 +135,7 @@ init_per_group(session_ets, Config) ->
 	Options ++ Config;
 
 init_per_group(with_custom_500, Config) ->
-	axiom:start(axiom_error_test_app),
+	axiom_error_test_app:start(),
 	Config;
 
 init_per_group(with_filters, Config) ->
