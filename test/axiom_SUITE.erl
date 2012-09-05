@@ -139,7 +139,7 @@ init_per_group(with_custom_500, Config) ->
 	Config;
 
 init_per_group(with_filters, Config) ->
-	axiom:start(axiom_app_with_filters),
+	axiom_app_with_filters:start(),
 	Config.
 
 end_per_group(with_defaults, _Config) ->
