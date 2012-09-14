@@ -7,16 +7,21 @@
 
 -record(state, {tid, conf = []}).
 
+%% @private
 -spec init([tuple()]) -> {ok, #state{}}.
 init(Conf) ->
 	Tid = ets:new(?MODULE, [set, private]),
 	{ok, #state{tid = Tid, conf = Conf}}.
 
+
+%% @doc Store a new session, unless it's not new.
 -spec new(#state{}, any(), #http_req{}) -> {ok, #state{}}.
 new(State, SessionId, _Req) ->
 	ets:insert_new(State#state.tid, {SessionId, []}),
 	{ok, State}.
 
+
+%% @doc Set a value.
 -spec set(#state{}, any(), any(), #http_req{}) -> {ok, #state{}}.
 set(State, Key, Value, Req) ->
 	{SessionId, _} = cowboy_http_req:meta(session_id, Req),
@@ -28,6 +33,8 @@ set(State, Key, Value, Req) ->
 	true = ets:insert(State#state.tid, {SessionId, NewSession}),
 	{ok, State}.
 
+
+%% @doc Get a value.
 -spec get(#state{}, any(), #http_req{}) -> {any(), #state{}}.
 get(State, Key, Req) ->
 	{SessionId, _} = cowboy_http_req:meta(session_id, Req),
@@ -37,6 +44,7 @@ get(State, Key, Req) ->
 	end,
 	{Value, State}.
 
+%% @doc Delete a session.
 -spec delete(#state{}, #http_req{}) -> {ok, #state{}}.
 delete(State, Req) ->
 	{SessionId, _} = cowboy_http_req:meta(session_id, Req),

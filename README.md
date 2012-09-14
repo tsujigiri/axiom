@@ -1,7 +1,7 @@
 # Axiom [![Build Status](https://secure.travis-ci.org/tsujigiri/axiom.png?branch=master)](http://travis-ci.org/tsujigiri/axiom)
 
-Axiom is a lightweight web framework, inspired by
-[Sinatra](http://sinatrarb.com) and built on top of
+Axiom is a micro-framework for building web applications. It is
+inspired by [Sinatra](http://sinatrarb.com) and built on top of
 [Cowboy](https://github.com/extend/cowboy).
 
 ## Getting Started
@@ -13,7 +13,8 @@ A minimal application would look like this:
 -module(my_app).
 -export([start/0, handle/3]).
 
-start() -> axiom:start(?MODULE).
+start() ->
+	axiom:start(?MODULE).
 
 handle('GET', [<<"hi">>], _Request) ->
 	<<"Hello world!">>.

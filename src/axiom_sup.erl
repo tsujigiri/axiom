@@ -10,12 +10,14 @@
 
 %% API
 
+%% @private
 start_link() ->
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 
 %% callbacks
 
+%% @private
 init([]) ->
     {ok, {{one_for_one, 5, 10}, [
 		{axiom_session, {axiom_session, start_link, []},
