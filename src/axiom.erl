@@ -265,6 +265,10 @@ atomify_keys([Head|Proplist]) ->
 %% @private
 %% @doc Looks for static files in the `public' directory and tells
 %% {@link //cowboy} about it.
+is_directory(F,PubDir) ->
+  {ok, FileInfo} = file:read_file_info([PubDir, "/", F]),
+  FileInfo#file_info.type == directory.
+
 -spec static_dispatch() -> [tuple()].
 static_dispatch() ->
 	{ok, PubDir} = application:get_env(axiom, public),
@@ -272,10 +276,7 @@ static_dispatch() ->
 		{error, enoent} -> [];
 		{ok, F} -> F
 	end,
-	{Dirs, _} = lists:splitwith(fun(F) ->
-				{ok, FileInfo} = file:read_file_info([PubDir, "/", F]),
-				FileInfo#file_info.type == directory
-		end, Files),
+        Dirs = [X || X <- Files, is_directory(X,PubDir)],
 	lists:map(fun(Dir) ->
 			{
 				[list_to_binary(Dir), '...'],
