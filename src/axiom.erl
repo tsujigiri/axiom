@@ -177,7 +177,7 @@ init({tcp, http}, Req, [Handler]) ->
 %% @doc Called by {@link //cowboy} during termination.
 -spec terminate(#http_req{}, #state{}) -> ok.
 terminate(_Req, _State) ->
-    ok.
+	ok.
 
 
 %% INTERNAL FUNCTIONS
@@ -255,9 +255,9 @@ atomify_keys([]) ->
 atomify_keys([Head|Proplist]) ->
 	[Key|Tail] = tuple_to_list(Head),
 	Key2 = case Key of
-               K when is_binary(K) -> list_to_atom(binary_to_list(K));
-               K when is_list(K) -> list_to_atom(K);
-               K when is_atom(K) -> K
+		K when is_binary(K) -> list_to_atom(binary_to_list(K));
+		K when is_list(K) -> list_to_atom(K);
+		K when is_atom(K) -> K
 	end,
 	[list_to_tuple([Key2|Tail]) | atomify_keys(Proplist)].
 
@@ -265,10 +265,6 @@ atomify_keys([Head|Proplist]) ->
 %% @private
 %% @doc Looks for static files in the `public' directory and tells
 %% {@link //cowboy} about it.
-is_directory(F,PubDir) ->
-  {ok, FileInfo} = file:read_file_info([PubDir, "/", F]),
-  FileInfo#file_info.type == directory.
-
 -spec static_dispatch() -> [tuple()].
 static_dispatch() ->
 	{ok, PubDir} = application:get_env(axiom, public),
@@ -276,7 +272,7 @@ static_dispatch() ->
 		{error, enoent} -> [];
 		{ok, F} -> F
 	end,
-        Dirs = [X || X <- Files, is_directory(X,PubDir)],
+	Dirs = [X || X <- Files, is_directory(X, PubDir)],
 	lists:map(fun(Dir) ->
 			{
 				[list_to_binary(Dir), '...'],
@@ -288,6 +284,12 @@ static_dispatch() ->
 			}
 		end, Dirs).
 
+%% @private
+-spec is_directory(string(), string()) -> true | false.
+is_directory(F, PubDir) ->
+	{ok, FileInfo} = file:read_file_info([PubDir, "/", F]),
+	FileInfo#file_info.type == directory.
+
 
 %% @private
 %% @doc Formats a stacktrace in a more human readable manner.
@@ -295,7 +297,7 @@ format_stacktrace([]) ->
 	[];
 
 format_stacktrace([H|Stacktrace]) ->
-    {M, F, A, Location} = H,
+	{M, F, A, Location} = H,
 	Line = case proplists:get_value(line, Location) of
 		undefined -> "";
 		Else -> io_lib:format("~p: ", [Else])
