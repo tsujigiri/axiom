@@ -219,17 +219,29 @@ The argument is the `http_req` record, otherwise it works like the
 
 ## Streaming
 
-To send a chunked reply, call `axiom:chunk(Data, Req)` for each chunk.
-This returns `{ok, Req2}`, with `Req2` being an altered `http_req`
-record, which has to be given as an argument to subsequent calls to
-`chunk/2`. Further, you have to return `Req2` from your
+To send a chunked reply, call `axiom:chunk/2` for each chunk:
+
+```erlang
+chunk(Data::iodata(), #http_req{}) -> {ok, #http_req{}}.
+```
+
+The returned `http_req` record has to be given as an argument to
+subsequent calls to `chunk` and as the return value of your
 `Handler:handle/3` function.
+
+To stream data with a Content-Type other than `text/html`, use
+`chunk/3`, which has an additional parameter, to be set to the type you
+want:
+
+```erlang
+chunk(Data::iodata(), #http_req{}, Type::binary()) -> {ok, #http_req{}}.
+```
 
 ### Example
 
 ```erlang
 handle('GET', [<<"stream">>], Req) ->
-	{ok, Req2} = axiom:chunk(<<"Hello">>, Req),
+	{ok, Req2} = axiom:chunk(<<"Hello">>, Req, <<"text/plain">>),
 	{ok, _} = axiom:chunk(<<" world">>, Req2),
 	{ok, _} = axiom:chunk(<<"!">>, Req2),
 	Req2.

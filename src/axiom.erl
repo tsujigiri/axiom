@@ -156,7 +156,7 @@ param(Param, Req) ->
 %%
 %% If you want to set a Content-Type other than `<<"text/html">>`, do
 %% so with the second argument. Otherwise use {@link chunk/2}.
--spec chunk(iodata(), binary(), #http_req{}) -> {ok, #http_req{}}.
+-spec chunk(iodata(), #http_req{}, binary()) -> {ok, #http_req{}}.
 chunk(Data, ContentType, Req) when is_binary(Data) ->
 	Req3 = case Req#http_req.resp_state of
 		waiting ->
@@ -169,14 +169,11 @@ chunk(Data, ContentType, Req) when is_binary(Data) ->
 	end,
 	Loop = proplists:get_value(stream_loop_pid, Req3#http_req.meta),
 	Loop ! Data,
-	{ok, Req3};
+	{ok, Req3}.
 
-chunk(Data, ContentType, Req) ->
-	chunk(list_to_binary(Data), ContentType, Req).
-
-%% @equiv chunk(Data, <<"text/html">>, Req)
+%% @equiv chunk(Data, Req, <<"text/html">>)
 chunk(Data, Req) ->
-	chunk(Data, <<"text/html">>, Req).
+	chunk(Data, Req, <<"text/html">>).
 
 
 %% CALLBACKS
