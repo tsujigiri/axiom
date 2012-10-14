@@ -217,6 +217,21 @@ To handle these yourself, you can implement a function named `error/1`.
 The argument is the `http_req` record, otherwise it works like the
 `handle` function, only with a default status code of 500.
 
+## Streaming
+
+To send a chunked reply, call `axiom:chunk(Data, Req)` for each chunk.
+This returns `{ok, Req2}`. For subsequent calls to `chunk/2`, use the
+`Req2` returned by the first one. You also have to return Req2 from your
+`Handler:handle/3` function.
+
+### Example
+
+```erlang
+handle('GET', [<<"stream">>], Req) ->
+	{ok, Req2} = axiom:chunk(<<"Hello">>, Req),
+	{ok, _} = axiom:chunk(<<"Hello">>, Req2),
+	Req2.
+```
 
 ## Installation
 
