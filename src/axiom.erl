@@ -4,7 +4,10 @@
 -export([init/3, handle/2, terminate/2]).
 
 % api
--export([start/1, start/2, stop/0, params/1, param/2, dtl/1, dtl/2, redirect/2]).
+-export([start/1, start/2, stop/0, params/1, param/2, dtl/1, dtl/2, redirect/2, chunk/2]).
+
+% other
+-export([stream_loop/1]).
 
 -record(state, {handler}).
 
@@ -147,6 +150,35 @@ param(Param, Req) ->
 	proplists:get_value(Param, params(Req)).
 
 
+%% @doc Initiates a chunked reply and sends chunked data. The returned
+%% `#http_req{}` of the first call, has to be given as an argument in
+%% subsequent calls and returned from `Handler:handle/3`.
+%%
+%% If you want to set a Content-Type other than `<<"text/html">>`, do
+%% so with the second argument. Otherwise use {@link chunk/2}.
+-spec chunk(iodata(), binary(), #http_req{}) -> {ok, #http_req{}}.
+chunk(Data, ContentType, Req) when is_binary(Data) ->
+	Req3 = case Req#http_req.resp_state of
+		waiting ->
+			{ok, Req2} = cowboy_http_req:chunked_reply(200,
+					[{'Content-Type', ContentType}], Req),
+			Pid = spawn_link(?MODULE, stream_loop, [Req2]),
+			Req2#http_req{meta = 
+				lists:keystore(meta, 1, Req2#http_req.meta, {stream_loop_pid, Pid})};
+		chunks -> Req
+	end,
+	Loop = proplists:get_value(stream_loop_pid, Req3#http_req.meta),
+	Loop ! Data,
+	{ok, Req3};
+
+chunk(Data, ContentType, Req) ->
+	chunk(list_to_binary(Data), ContentType, Req).
+
+%% @equiv chunk(Data, <<"text/html">>, Req)
+chunk(Data, Req) ->
+	chunk(Data, <<"text/html">>, Req).
+
+
 %% CALLBACKS
 
 %% @private
@@ -161,8 +193,15 @@ handle(Req, State) ->
 	catch Error:Reason ->
 		handle_error(Error, Reason, erlang:get_stacktrace(), Handler, Req)
 	end,
-	{ok, Req4} = cowboy_http_req:reply(Resp#response.status,
-		Resp#response.headers, Resp#response.body, Req3),
+	{ok, Req4} = case Req3#http_req.resp_state of
+		waiting ->
+			cowboy_http_req:reply(Resp#response.status,
+				Resp#response.headers, Resp#response.body, Req3);
+		chunks ->
+			ok = cowboy_http_req:chunk(<<>>, Req3),
+			{ok, Req3};
+		_ -> {ok, Req3}
+	end,
 	{ok, Req4, State}.
 
 
@@ -193,12 +232,12 @@ call_handler(Handler, Req) ->
 		true -> Handler:before_filter(Req);
 		false -> Req
 	end,
-	Resp = process_response(Handler:handle(Method, Path, Req2)),
-	{Resp2, Req3} = case erlang:function_exported(Handler, after_filter, 1) of
-		true -> Handler:after_filter(Resp, Req2);
-		false -> {Resp, Req2}
+	{Resp, Req3} = process_response(Handler:handle(Method, Path, Req2), Req2),
+	{Resp2, Req4} = case erlang:function_exported(Handler, after_filter, 2) of
+		true -> Handler:after_filter(Resp, Req3);
+		false -> {Resp, Req3}
 	end,
-	{#response{}, #http_req{}} = {Resp2, Req3}.
+	{#response{}, #http_req{}} = {Resp2, Req4}.
 
 
 %% @private
@@ -213,36 +252,32 @@ handle_error(error, function_clause, [{Handler, handle, _, _}|_], Handler, Req) 
 	{Resp, Req};
 
 handle_error(Error, Reason, Stacktrace, Handler, Req) ->
-	Resp = case erlang:function_exported(Handler, error, 1) of
-		true -> process_response(Handler:error(Req), 500);
-		false -> #response{status = 500, body = dtl(axiom_error_500, [
-				{error, Error},
-				{reason, io_lib:format("~p", [Reason])},
-				{stacktrace, format_stacktrace(Stacktrace)}
-			])}
+	{Resp, Req2} = case erlang:function_exported(Handler, error, 1) of
+		true ->
+			process_response(Handler:error(Req), Req);
+		false -> {
+				#response{status = 500, body = dtl(axiom_error_500, [
+					{error, Error},
+					{reason, io_lib:format("~p", [Reason])},
+					{stacktrace, format_stacktrace(Stacktrace)}
+				])},
+				Req
+			}
 	end,
-	{Resp, Req}.
+	{Resp, Req2}.
 
 
 %% @private
-%% @doc Processes the response of the request handler's `handle/3'
-%% function.
--spec process_response(#response{}) -> #response{};
-                      (iolist()) -> #response{}.
-process_response(Resp = #response{}) ->
-	Resp;
+%% @doc Whatever Handler:handle/3 returns, make it a tuple looking like
+%% this: `{#response{}, #http_req{}}`
+-spec process_response(#response{}, #http_req{}) -> {#response{}, #http_req{}};
+                      (#http_req{}, #http_req{}) -> {#response{}, #http_req{}};
+					  (iolist(), #http_req{}) -> {#response{}, #http_req{}}.
 
-process_response(Resp) when is_binary(Resp); is_list(Resp) ->
-	#response{body=Resp}.
-
-
--spec process_response(#response{}, non_neg_integer()) -> #response{};
-                      (iolist(), non_neg_integer()) -> #response{}.
-process_response(Resp = #response{}, _Status) ->
-	Resp;
-
-process_response(Resp, Status) when is_binary(Resp); is_list(Resp) ->
-	#response{status = Status, body = Resp}.
+process_response(Resp = #response{}, Req) -> {Resp, Req};
+process_response(Req = #http_req{}, _) -> {#response{}, Req};
+process_response(Resp, Req) when is_binary(Resp); is_list(Resp) ->
+	{#response{body=Resp}, Req}.
 
 
 %% @private
@@ -308,4 +343,16 @@ format_stacktrace([H|Stacktrace]) ->
 	end,
 	[io_lib:format("~s~s in ~p:~p/~p", [File, Line, M, F, A]) |
 		format_stacktrace(Stacktrace)].
+
+
+%% @private
+-spec stream_loop(#http_req{}) -> ok.
+stream_loop(Req) ->
+	receive
+		terminate -> ok;
+		Data ->
+			ok = cowboy_http_req:chunk(Data, Req),
+			stream_loop(Req)
+	end.
+
 
