@@ -220,8 +220,9 @@ The argument is the `http_req` record, otherwise it works like the
 ## Streaming
 
 To send a chunked reply, call `axiom:chunk(Data, Req)` for each chunk.
-This returns `{ok, Req2}`. For subsequent calls to `chunk/2`, use the
-`Req2` returned by the first one. You also have to return Req2 from your
+This returns `{ok, Req2}`, with `Req2` being an altered `http_req`
+record, which has to be given as an argument to subsequent calls to
+`chunk/2`. Further, you have to return `Req2` from your
 `Handler:handle/3` function.
 
 ### Example
@@ -229,7 +230,8 @@ This returns `{ok, Req2}`. For subsequent calls to `chunk/2`, use the
 ```erlang
 handle('GET', [<<"stream">>], Req) ->
 	{ok, Req2} = axiom:chunk(<<"Hello">>, Req),
-	{ok, _} = axiom:chunk(<<"Hello">>, Req2),
+	{ok, _} = axiom:chunk(<<" world">>, Req2),
+	{ok, _} = axiom:chunk(<<"!">>, Req2),
 	Req2.
 ```
 
