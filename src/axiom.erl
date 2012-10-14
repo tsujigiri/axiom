@@ -187,8 +187,8 @@ chunk(Data, Req) ->
 -spec handle(#http_req{}, #state{}) -> {ok, #http_req{}, #state{}}.
 handle(Req, State) ->
 	Handler = State#state.handler,
-	{Resp, Req3} = try
 		Req2 = axiom_session:new(Req),
+	{Resp, Req3} = try
 		call_handler(Handler, Req2)
 	catch Error:Reason ->
 		handle_error(Error, Reason, erlang:get_stacktrace(), Handler, Req)

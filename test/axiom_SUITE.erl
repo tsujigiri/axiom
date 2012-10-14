@@ -87,6 +87,13 @@ http_with_filters(Config) ->
 	{"HTTP/1.1",200,"OK"} = Status,
 	"It works!" = Body.
 
+http_stream_data(Config) ->
+	{ok, _Ref} = httpc:request(get,
+			{base_url(Config) ++ "stream", []}, [],
+			[{sync, false}, {stream, self}]),
+	Body = receive_stream([]),
+	<<"Hello world!">> = Body.
+
 
 % suite
 
@@ -97,7 +104,7 @@ groups() -> [
 		{with_defaults, [],
 			[redirect, http_hello_world, http_not_found, http_post_with_params,
 				http_render_template, http_redirect, http_respond_with_iolist,
-				http_500]},
+				http_500, http_stream_data]},
 		{with_options, [], [http_hello_world]},
 		{static_files, [], [http_hello_static]},
 		{session_ets, [], [http_set_and_get]},
@@ -190,7 +197,12 @@ handle('GET', [<<"get">>], Request) ->
 	Foo;
 
 handle('GET', [<<"fail">>], _Request) ->
-	foo = bar.
+	foo = bar;
+
+handle('GET', [<<"stream">>], Req) ->
+	{ok, Req2} = axiom:chunk(<<"Hello">>, Req),
+	{ok, _} = axiom:chunk(<<" world!">>, Req2),
+	Req2.
 
 % helpers
 
@@ -203,4 +215,14 @@ get_option(Opt, Config) ->
 
 base_url(Config) ->
 	"http://localhost:" ++ integer_to_list(get_option(port, Config)) ++ "/".
+
+
+receive_stream(ReceivedSoFar) ->
+	receive
+		{http, {_ReqId, stream_start, _Headers}} -> receive_stream(ReceivedSoFar);
+		{http, {_ReqId, stream, BodyPart}} -> receive_stream([ReceivedSoFar, BodyPart]);
+		{http, {_ReqId, stream_end, _Headers}} -> list_to_binary(ReceivedSoFar)
+	after 1000 ->
+		{error, timeout}
+	end.
 
