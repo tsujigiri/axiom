@@ -157,7 +157,7 @@ param(Param, Req) ->
 %% If you want to set a Content-Type other than `<<"text/html">>`, do
 %% so with the second argument. Otherwise use {@link chunk/2}.
 -spec chunk(iodata(), #http_req{}, binary()) -> {ok, #http_req{}}.
-chunk(Data, ContentType, Req) when is_binary(Data) ->
+chunk(Data, Req, ContentType) when is_binary(Data) ->
 	Req3 = case Req#http_req.resp_state of
 		waiting ->
 			{ok, Req2} = cowboy_http_req:chunked_reply(200,
