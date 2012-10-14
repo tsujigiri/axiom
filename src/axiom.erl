@@ -197,9 +197,6 @@ handle(Req, State) ->
 		waiting ->
 			cowboy_http_req:reply(Resp#response.status,
 				Resp#response.headers, Resp#response.body, Req3);
-		chunks ->
-			ok = cowboy_http_req:chunk(<<>>, Req3),
-			{ok, Req3};
 		_ -> {ok, Req3}
 	end,
 	{ok, Req4, State}.
