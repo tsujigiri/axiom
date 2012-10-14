@@ -197,6 +197,15 @@ handle(Req, State) ->
 		waiting ->
 			cowboy_http_req:reply(Resp#response.status,
 				Resp#response.headers, Resp#response.body, Req3);
+		chunks ->
+			% wait for the streaming loop to finish sending everything
+			Loop = proplists:get_value(stream_loop_pid, Req3#http_req.meta),
+			MonRef = monitor(process, Loop),
+			Loop ! terminate,
+			receive {'DOWN', MonRef, process, Loop, _Info} -> ok
+			after 60000 -> ok
+			end,
+			{ok, Req3};
 		_ -> {ok, Req3}
 	end,
 	{ok, Req4, State}.
