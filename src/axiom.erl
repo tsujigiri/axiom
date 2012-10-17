@@ -4,7 +4,8 @@
 -export([init/3, handle/2, terminate/2]).
 
 % api
--export([start/1, start/2, stop/0, params/1, param/2, dtl/1, dtl/2, redirect/2, chunk/2]).
+-export([start/1, start/2, stop/0, params/1, param/2, dtl/1, dtl/2, redirect/2,
+	chunk/2, set_header/3]).
 
 % other
 -export([stream_loop/1]).
@@ -174,6 +175,17 @@ chunk(Data, Req, ContentType) when is_binary(Data) ->
 %% @equiv chunk(Data, Req, <<"text/html">>)
 chunk(Data, Req) ->
 	chunk(Data, Req, <<"text/html">>).
+
+
+-spec set_header(cowboy_http:header(), binary(), #http_req{}) -> #http_req{};
+                (tuple(), binary(), #response{}) -> #response{}.
+set_header(Key, Value, Req = #http_req{}) ->
+	{ok, Req2} = cowboy_http_req:set_resp_header(Key, Value, Req),
+	Req2;
+
+set_header(Key, Value, Resp = #response{}) ->
+	Headers = lists:keystore(Key, 1, Resp#response.headers, {Key, Value}),
+	Resp#response{headers = Headers}.
 
 
 %% CALLBACKS

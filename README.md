@@ -45,8 +45,7 @@ headers:
 ```erlang
 handle('GET', [<<"foo">>], _Request) ->
 	Resp = #response{},
-	Headers = lists:keystore(<<"X-My-Header">>, 1, Resp#response.headers,
-		{<<"X-My-Header">>, <<"O HAI!">>}),
+	Headers = axiom:set_header(<<"X-My-Header">>, <<"O HAI!">>, Resp),
 	#response{headers = Headers, body = <<"<h1>It works!</h1>">>}.
 ```
 

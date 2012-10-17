@@ -18,6 +18,13 @@ redirect(_Config) ->
 	#response{status = 303, headers = Headers3} = axiom:redirect("/foo/bar", Req2),
 	"http://example.com/foo/bar" = proplists:get_value('Location', Headers3).
 
+set_header_on_response(_Config) ->
+	#response{headers = [{'Content-Type', <<"text/html">>}, {<<"X-Foo">>, <<"bar">>}]} =
+		axiom:set_header(<<"X-Foo">>, <<"bar">>, #response{}).
+
+set_header_on_http_req(_Config) ->
+	#http_req{resp_headers = [{<<"X-Foo">>, <<"bar">>}]} =
+		axiom:set_header(<<"X-Foo">>, <<"bar">>, #http_req{}).
 
 http_hello_world(Config) ->
 	{ok, {Status, Headers, Body}} = httpc:request(base_url(Config)),
@@ -104,7 +111,8 @@ groups() -> [
 		{with_defaults, [],
 			[redirect, http_hello_world, http_not_found, http_post_with_params,
 				http_render_template, http_redirect, http_respond_with_iolist,
-				http_500, http_stream_data]},
+				http_500, http_stream_data, set_header_on_response,
+				set_header_on_http_req]},
 		{with_options, [], [http_hello_world]},
 		{static_files, [], [http_hello_static]},
 		{session_ets, [], [http_set_and_get]},
