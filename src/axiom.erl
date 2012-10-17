@@ -151,10 +151,10 @@ param(Param, Req) ->
 
 
 %% @doc Initiates a chunked reply and sends chunked data. The returned
-%% `#http_req{}` of the first call, has to be given as an argument in
-%% subsequent calls and returned from `Handler:handle/3`.
+%% `#http_req{}' of the first call, has to be given as an argument in
+%% subsequent calls and returned from `Handler:handle/3'.
 %%
-%% If you want to set a Content-Type other than `<<"text/html">>`, do
+%% If you want to set a Content-Type other than `<<"text/html">>', do
 %% so with the second argument. Otherwise use {@link chunk/2}.
 -spec chunk(iodata(), #http_req{}, binary()) -> {ok, #http_req{}}.
 chunk(Data, Req, ContentType) when is_binary(Data) ->
@@ -272,7 +272,7 @@ handle_error(Error, Reason, Stacktrace, Handler, Req) ->
 
 %% @private
 %% @doc Whatever Handler:handle/3 returns, make it a tuple looking like
-%% this: `{#response{}, #http_req{}}`
+%% this: `{#response{}, #http_req{}}'
 -spec process_response(#response{}, #http_req{}) -> {#response{}, #http_req{}};
                       (#http_req{}, #http_req{}) -> {#response{}, #http_req{}};
 					  (iolist(), #http_req{}) -> {#response{}, #http_req{}}.
