@@ -45,8 +45,8 @@ headers:
 ```erlang
 handle('GET', [<<"foo">>], _Request) ->
 	Resp = #response{},
-	Headers = axiom:set_header(<<"X-My-Header">>, <<"O HAI!">>, Resp),
-	#response{headers = Headers, body = <<"<h1>It works!</h1>">>}.
+	Resp2 = axiom:set_header(<<"X-My-Header">>, <<"O HAI!">>, Resp),
+	Resp2#response{body = <<"<h1>It works!</h1>">>}.
 ```
 
 The `response` record defines sane defaults for all the fields, so you
