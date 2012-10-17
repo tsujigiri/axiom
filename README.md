@@ -1,7 +1,7 @@
 # Axiom [![Build Status](https://secure.travis-ci.org/tsujigiri/axiom.png?branch=master)](http://travis-ci.org/tsujigiri/axiom)
 
-Axiom is a micro-framework for building web applications. It is
-inspired by [Sinatra](http://sinatrarb.com) and built on top of
+Axiom is a micro-framework for building web applications in Erlang.
+It is inspired by [Sinatra](http://sinatrarb.com) and built on top of
 [Cowboy](https://github.com/extend/cowboy).
 
 ## Getting Started
@@ -53,7 +53,11 @@ The `response` record defines sane defaults for all the fields, so you
 don't need to specify every one of them:
 
 ```erlang
--record(response, {status = 200, headers = [{'Content-Type', "text/html"}], body = <<"">>}).
+-record(response, {
+		status = 200                                  :: non_neg_integer(),
+		headers = [{'Content-Type', <<"text/html">>}] :: [tuple()],
+		body = <<>>                                   :: iodata()
+}).
 ```
 
 To get the request parameters out of the request, you can use the two
