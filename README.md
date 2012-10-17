@@ -45,7 +45,8 @@ headers:
 ```erlang
 handle('GET', [<<"foo">>], _Request) ->
 	Resp = #response{},
-	Headers = lists:keystore(<<"X-My-Header">>, 1, Resp, {<<"X-My-Header">>, <<"O HAI!">>}),
+	Headers = lists:keystore(<<"X-My-Header">>, 1, Resp#response.headers,
+		{<<"X-My-Header">>, <<"O HAI!">>}),
 	#response{headers = Headers, body = <<"<h1>It works!</h1>">>}.
 ```
 
