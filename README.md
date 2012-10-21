@@ -139,6 +139,17 @@ called.
 To see what else erlydtl can do for you, take a look at
 [its project page](https://code.google.com/p/erlydtl/).
 
+
+## Headers
+
+Header fields can be added with `axiom:add_header/3` to the `response`
+and (for streaming) `http_req` records:
+
+```erlang
+-spec set_header(cowboy_http:header(), binary(), #response{}) -> #response{};
+                (cowboy_http:header(), binary(), #http_req{}) -> #http_req{}.
+```
+
 ## Sessions
 
 Axiom comes with a basic session handler and ets based session store. To
