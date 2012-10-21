@@ -198,7 +198,7 @@ set_header(Key, Value, Req = #http_req{}) ->
 -spec handle(#http_req{}, #state{}) -> {ok, #http_req{}, #state{}}.
 handle(Req, State) ->
 	Handler = State#state.handler,
-		Req2 = axiom_session:new(Req),
+	Req2 = axiom_session:new(Req),
 	{Resp, Req3} = try
 		call_handler(Handler, Req2)
 	catch Error:Reason ->
@@ -254,14 +254,13 @@ call_handler(Handler, Req) ->
 		true -> Handler:after_filter(Resp, Req3);
 		false -> {Resp, Req3}
 	end,
-	{#response{}, #http_req{}} = {Resp2, Req4}.
+	{Resp2, Req4}.
 
 
 %% @private
 %% @doc Handles errors in the request handler's `before_filter/1',
 %% `after_filter/2' and `handle/3' functions.
--spec handle_error(error, function_clause, [tuple()], module(), #http_req{}) -> {#response{}, #http_req{}};
-                  (atom(), any(), [tuple()], module(), #http_req{}) -> {#response{}, #http_req{}}.
+-spec handle_error(atom(), any(), [tuple()], module(), #http_req{}) -> {#response{}, #http_req{}}.
 handle_error(error, function_clause, [{Handler, handle, _, _}|_], Handler, Req) ->
 	Path = Req#http_req.path,
 	Resp = #response{status = 404,

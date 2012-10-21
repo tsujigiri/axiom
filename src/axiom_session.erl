@@ -27,7 +27,7 @@ start_link() ->
 %% @doc Creates a new session.
 %% 
 %% Called by {@link axiom:handle/3} when sessions are configured.
--spec new(#http_req{}) -> {ok, #http_req{}}.
+-spec new(#http_req{}) -> #http_req{}.
 new(Req) ->
 	case application:get_env(axiom, sessions) of
 		undefined -> Req;
