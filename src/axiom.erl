@@ -177,15 +177,17 @@ chunk(Data, Req) ->
 	chunk(Data, Req, <<"text/html">>).
 
 
--spec set_header(cowboy_http:header(), binary(), #http_req{}) -> #http_req{};
-                (tuple(), binary(), #response{}) -> #response{}.
-set_header(Key, Value, Req = #http_req{}) ->
-	{ok, Req2} = cowboy_http_req:set_resp_header(Key, Value, Req),
-	Req2;
-
+%% @doc Adds a response header field to a `response' or `http_req'
+%% record.
+-spec set_header(cowboy_http:header(), binary(), #response{}) -> #response{};
+                (cowboy_http:header(), binary(), #http_req{}) -> #http_req{}.
 set_header(Key, Value, Resp = #response{}) ->
 	Headers = lists:keystore(Key, 1, Resp#response.headers, {Key, Value}),
-	Resp#response{headers = Headers}.
+	Resp#response{headers = Headers};
+
+set_header(Key, Value, Req = #http_req{}) ->
+	{ok, Req2} = cowboy_http_req:set_resp_header(Key, Value, Req),
+	Req2.
 
 
 %% CALLBACKS
