@@ -7,9 +7,6 @@
 -export([start/1, start/2, stop/0, params/1, param/2, dtl/1, dtl/2, redirect/2,
 	chunk/2, set_header/3]).
 
-% other
--export([stream_loop/1]).
-
 -record(state, {handler}).
 
 -include_lib("cowboy/include/http.hrl").
@@ -163,7 +160,7 @@ chunk(Data, Req, ContentType) when is_binary(Data) ->
 		waiting ->
 			{ok, Req2} = cowboy_http_req:chunked_reply(200,
 					[{'Content-Type', ContentType}], Req),
-			Pid = spawn_link(?MODULE, stream_loop, [Req2]),
+			Pid = spawn(fun() -> stream_loop(Req2) end),
 			Req2#http_req{meta = 
 				lists:keystore(meta, 1, Req2#http_req.meta, {stream_loop_pid, Pid})};
 		chunks -> Req
