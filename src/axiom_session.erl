@@ -58,7 +58,7 @@ get(Key, Req) ->
 %% @doc Deletes a session.
 -spec delete(#http_req{}) -> any().
 delete(Req) ->
-	gen_server:call(?MODULE, {reset, [Req]}).
+	gen_server:call(?MODULE, {delete, [Req]}).
 
 
 %% CALLBACKS
