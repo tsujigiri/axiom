@@ -118,7 +118,7 @@ redirect(UrlOrPath, Req) ->
 					_ -> <<>>
 				end,
 				<<"://">>,
-				Req#http_req.host,
+				join(Req#http_req.host, <<".">>),
 				case Req#http_req.port of
 					80 -> <<>>;
 					Port -> [<<":">>, integer_to_list(Port)]
@@ -368,4 +368,12 @@ stream_loop(Req) ->
 			stream_loop(Req)
 	end.
 
-
+%% @private
+-spec join([binary()], binary()) -> binary().
+join([], _Sep) ->
+	[];
+join([Bin], _Sep) ->
+	Bin;
+join([Bin|Bins], Sep) ->
+	Rest = join(Bins, Sep),
+	<<Bin/binary, Sep/binary, Rest/binary>>.
