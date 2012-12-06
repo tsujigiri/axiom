@@ -7,13 +7,13 @@
 
 
 redirect(_Config) ->
-	Req = #http_req{version = {1,1}, host = "example.com", port = 2342,
+	Req = #http_req{version = {1,1}, host = [<<"example">>, <<"com">>], port = 2342,
 		method = 'GET'},
 	#response{headers = Headers} = axiom:redirect("/foo/bar", Req),
 	"http://example.com:2342/foo/bar" = proplists:get_value('Location', Headers),
 	#response{status = 302, headers = Headers2} = axiom:redirect("http://example.org/foo/bar", Req),
 	"http://example.org/foo/bar" = proplists:get_value('Location', Headers2),
-	Req2 = #http_req{version = {1,1}, host = "example.com", port = 80,
+	Req2 = #http_req{version = {1,1}, host = [<<"example">>, <<"com">>], port = 80,
 		method = 'POST'},
 	#response{status = 303, headers = Headers3} = axiom:redirect("/foo/bar", Req2),
 	"http://example.com/foo/bar" = proplists:get_value('Location', Headers3).
@@ -72,6 +72,14 @@ http_redirect(Config) ->
 	{"HTTP/1.1",302,"Found"} = Status,
 	"http://example.com/over/here" = proplists:get_value("location", Headers).
 
+http_redirect_relative(Config) ->
+	{ok, {Status, Headers, _Body}} =
+	httpc:request(get, {base_url(Config) ++ "where/am/i", []},
+			[{autoredirect, false}],[]),
+	{"HTTP/1.1",302,"Found"} = Status,
+	Expect = base_url(Config) ++ "some/strange/place/?p=yes",
+	Expect = proplists:get_value("location", Headers).
+
 http_respond_with_iolist(Config) ->
 	{ok, {Status, _Headers, Body}} =
 	httpc:request(get, {base_url(Config) ++ "iolist", []}, [],[]),
@@ -112,7 +120,7 @@ groups() -> [
 			[redirect, http_hello_world, http_not_found, http_post_with_params,
 				http_render_template, http_redirect, http_respond_with_iolist,
 				http_500, http_stream_data, set_header_on_response,
-				set_header_on_http_req]},
+				set_header_on_http_req, http_redirect_relative]},
 		{with_options, [], [http_hello_world]},
 		{static_files, [], [http_hello_static]},
 		{session_ets, [], [http_set_and_get]},
@@ -192,6 +200,9 @@ handle('GET', [<<"template">>], Request) ->
 
 handle('GET', [<<"where">>, <<"are">>, <<"you">>], Request) ->
 	axiom:redirect("http://example.com/over/here", Request);
+
+handle('GET', [<<"where">>, <<"am">>, <<"i">>], Request) ->
+	axiom:redirect("/some/strange/place/?p=yes", Request);
 
 handle('GET', [<<"iolist">>], _Request) ->
 	["I ", [<<"am">>], <<" ">>, ["an"], <<" iolist!">>];
