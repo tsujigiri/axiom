@@ -84,13 +84,13 @@ are as follows:
 
 ## Static Files
 
-Static files are served via the `cowboy_http_static` handler. By
-default, every directory in your application's `./public` directory
-will be made accessible via a URL path prefix by the same name. E.g. the
+Static files are served via the `cowboy_http_static` handler. 
+By default, every file in ./public durectory will be made accessible 
+via URL path the same as filename. E.g. the file `./public/index.html` 
+can be accessed via `GET /index.html`. Additionaly, every directory 
+in your application's `./public` directory will be made accessible 
+via a URL path prefix by the same name. E.g. the
 file `./public/css/style.css` can be accessed via `GET /css/style.css`.
-
-`./public/index.html` will not be served (yet), as `cowboy_http_static`
-requires the URL path prefix.
 
 You can specify a custom directory via the `public` option.
 

@@ -310,8 +310,8 @@ atomify_keys([Head|Proplist]) ->
 	[list_to_tuple([Key2|Tail]) | atomify_keys(Proplist)].
 
 
-%% @private
-%% @doc Looks for static files in the `public' directory and tells
+%% @doc
+%% @private Looks for static files in the `public' directory and tells
 %% {@link //cowboy} about it.
 -spec static_dispatch() -> [tuple()].
 static_dispatch() ->
@@ -320,23 +320,29 @@ static_dispatch() ->
 		{error, enoent} -> [];
 		{ok, F} -> F
 	end,
-	Dirs = [X || X <- Files, is_directory(X, PubDir)],
-	lists:map(fun(Dir) ->
-			{
-				[list_to_binary(Dir), '...'],
-				cowboy_http_static,
-				[
-					{directory, [list_to_binary(PubDir), list_to_binary(Dir)]},
-					{mimetypes, {fun mimetypes:path_to_mimes/2, default}}
-				]
-			}
-		end, Dirs).
+	Dirs = [X || X <- Files, is_file_of_type(X, PubDir,directory)],
+	DirsDispatch = lists:map(fun(Dir) -> static_file_dispatch(Dir,[PubDir,Dir],[]) end, Dirs),
+	RegularFiles = [X || X <- Files, is_file_of_type(X, PubDir,regular)],
+	FilesDispatch = lists:map(fun(File) -> static_file_dispatch(File,[PubDir],[{file, list_to_binary(File)}]) end, RegularFiles),
+	DirsDispatch ++ FilesDispatch.
+
+-spec static_file_dispatch(string(),[string()],[tuple()]) -> [tuple()].
+static_file_dispatch(Path,Dir,AdditionalOpts) ->
+	{
+		[list_to_binary(Path),'...'],
+		cowboy_http_static,
+		[
+			{directory, lists:map(fun list_to_binary/1,Dir)},
+			{mimetypes, {fun mimetypes:path_to_mimes/2, default}} |
+			AdditionalOpts
+		]
+	}.
 
 %% @private
--spec is_directory(string(), string()) -> true | false.
-is_directory(F, PubDir) ->
+-spec is_file_of_type(string(), string(),directory | regular) -> true | false.
+is_file_of_type(F, PubDir,Type) ->
 	{ok, FileInfo} = file:read_file_info([PubDir, "/", F]),
-	FileInfo#file_info.type == directory.
+	FileInfo#file_info.type == Type.
 
 
 %% @private
