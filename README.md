@@ -85,12 +85,11 @@ are as follows:
 ## Static Files
 
 Static files are served via the `cowboy_http_static` handler. 
-By default, every file in ./public durectory will be made accessible 
-via URL path the same as filename. E.g. the file `./public/index.html` 
-can be accessed via `GET /index.html`. Additionaly, every directory 
-in your application's `./public` directory will be made accessible 
-via a URL path prefix by the same name. E.g. the
-file `./public/css/style.css` can be accessed via `GET /css/style.css`.
+By default, every file in ./public directory and all its subdirectories
+will be made accessible via URL path the same as file's relative path. 
+E.g. the file `./public/index.html` can be accessed via 
+`GET /index.html`. Note: currently if ./public subtree is changed, 
+Axiom needs to be restarted to reflect the change.
 
 You can specify a custom directory via the `public` option.
 
