@@ -311,32 +311,35 @@ atomify_keys([Head|Proplist]) ->
 
 
 %% @private
-%% @doc Looks for static files in the `public' directory and tells
+%% @doc Recursively looks for static files in the `public' directory and tells
 %% {@link //cowboy} about it.
 -spec static_dispatch() -> [tuple()].
 static_dispatch() ->
 	{ok, PubDir} = application:get_env(axiom, public),
-	Files = case file:list_dir(PubDir) of
-		{error, enoent} -> [];
-		{ok, F} -> F
-	end,
-	Dirs = [X || X <- Files, is_directory(X, PubDir)],
-	lists:map(fun(Dir) ->
-			{
-				[list_to_binary(Dir), '...'],
-				cowboy_http_static,
-				[
-					{directory, [list_to_binary(PubDir), list_to_binary(Dir)]},
-					{mimetypes, {fun mimetypes:path_to_mimes/2, default}}
-				]
-			}
-		end, Dirs).
+
+
+	filelib:fold_files(PubDir, ".+", true, 
+		fun(File,Acc) ->
+			RelPath = string:substr(File,string:len(PubDir)+2),
+			[static_file_dispatch(RelPath,PubDir) | Acc]
+		end,
+		[]).
 
 %% @private
--spec is_directory(string(), string()) -> true | false.
-is_directory(F, PubDir) ->
-	{ok, FileInfo} = file:read_file_info([PubDir, "/", F]),
-	FileInfo#file_info.type == directory.
+%% @doc Constructs {@link //cowboy} dispatch configuration for given 
+%% static file
+-spec static_file_dispatch(string(),[string()]) -> [tuple()].
+static_file_dispatch(RelPath,Dir) ->
+	Path = lists:map(fun list_to_binary/1,string:tokens(RelPath,"/")),
+	{
+		Path,
+		cowboy_http_static,
+		[
+			{directory, Dir},
+			{mimetypes, {fun mimetypes:path_to_mimes/2, default}},
+			{file, Path}
+		]
+	}.
 
 
 %% @private
