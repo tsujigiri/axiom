@@ -41,12 +41,8 @@ start(Handler, Options) ->
 	lists:map(fun({K,V}) -> application:set_env(?MODULE, K, V) end, Options),
 	{ok, Host} = application:get_env(?MODULE, host),
 	{ok, Path} = application:get_env(?MODULE, path),
-	Dispatch = cowboy_router:compile([{'_', [{'_', ?MODULE, [Handler]},
-						{"/[...]", cowboy_static, [
-								{directory, [<<"public">>]},
-								{mimetypes, {fun mimetypes:path_to_mimes/2, default}}
-								]}]}]),
-	%[{Host, static_dispatch() ++ [{'_', ?MODULE, [Handler]}]}]),
+	Dispatch = cowboy_router:compile(
+			[{Host, static_dispatch() ++ [{Path, ?MODULE, [Handler]}]}]),
 	ok = application:start(crypto),
 	ok = application:start(ranch),
 	ok = application:start(cowboy),
@@ -223,8 +219,7 @@ handle(Req, State) ->
 -spec init({tcp, http}, cowboy_req:req(), [module()]) ->
 	{ok, cowboy_req:req(), #state{}}.
 init({tcp, http}, Req, [Handler]) ->
-	%{ok, Req, #state{handler = Handler}}.
-	{upgrade, protocol, cowboy_rest}.
+	{ok, Req, #state{handler = Handler}}.
 
 
 %% @private
@@ -251,7 +246,6 @@ call_handler(Handler, Req) ->
 		[<<>> | Rest] -> Rest;
 		Else -> Else
 	end,
-	io:format("~p", [SplitPath]),
 	Req4 = process_response(Handler:handle(Method, SplitPath, Req3), Req3),
 	Req5 = case erlang:function_exported(Handler, after_filter, 2) of
 		true -> Handler:after_filter(Req4);
@@ -318,20 +312,32 @@ atomify_keys([Head|Proplist]) ->
 
 
 %% @private
-%% @doc Looks for static files in the `public' directory and tells
+%% @doc Recursively looks for static files in the `public' directory and tells
 %% {@link //cowboy} about it.
 -spec static_dispatch() -> [tuple()].
 static_dispatch() ->
 	{ok, PubDir} = application:get_env(axiom, public),
-	Files = filelib:fold_files(PubDir, ".*", true,
-			fun(F,Acc) -> [F -- PubDir|Acc] end, []),
-	lists:foldl(fun(File, Acc) ->
-				[{File, cowboy_static, [
-							{directory, <<"public">>},
-							{mimetypes, {fun mimetypes:path_to_mimes/2, default}}
-							]} | Acc]
-		end, [], Files).
+	filelib:fold_files(PubDir, ".+", true, 
+		fun(File,Acc) ->
+				RelPath = File -- PubDir,
+				[static_dispatch(RelPath, PubDir) | Acc]
+		end,
+		[]).
 
+%% @private
+%% @doc Constructs {@link //cowboy} dispatch configuration for given 
+%% static file
+-spec static_dispatch(string(),[string()]) -> [tuple()].
+static_dispatch(Path, Dir) ->
+	{
+		Path,
+		cowboy_static,
+		[
+			{directory, Dir},
+			{mimetypes, {fun mimetypes:path_to_mimes/2, default}},
+			{file, Path -- "/"}
+		]
+	}.
 
 
 %% @private
