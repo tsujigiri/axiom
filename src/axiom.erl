@@ -116,11 +116,11 @@ redirect(UrlOrPath, Req) ->
 	{Method, Req2} = cowboy_req:method(Req1),
 	{Version, Req3} = cowboy_req:version(Req2),
 	Status = case {Version, Method} of
-		{{1,1}, 'GET'} -> 302;
+		{{1,1}, <<"GET">>} -> 302;
 		{{1,1}, _} -> 303;
 		_ -> 302
 	end,
-	Req4 = cowboy_req:set_meta(response_status, Status, Req3),
+	Req4 = cowboy_req:set_meta(resp_status, Status, Req3),
 	cowboy_req:set_resp_header(<<"Location">>, Url, Req4).
 
 
@@ -136,7 +136,7 @@ assemble_url(Path, Req) ->
 			_ -> <<>>
 		end,
 		<<"://">>,
-		join(Host, <<".">>),
+		Host,
 		case Port of
 			80 -> <<>>;
 			Port -> [<<":">>, integer_to_list(Port)]
@@ -198,7 +198,7 @@ handle(Req, State) ->
 	end,
 	{ok, Req5} = case cowboy_req:get(resp_state, Req3) of
 		waiting ->
-			{Status, Req4} = cowboy_req:meta(response_status, Req3, 200),
+			{Status, Req4} = cowboy_req:meta(resp_status, Req3, 200),
 			cowboy_req:reply(Status, Req4);
 		chunks ->
 			% wait for the streaming loop to finish sending everything
@@ -261,7 +261,7 @@ call_handler(Handler, Req) ->
 	cowboy_req:req().
 handle_error(error, function_clause, [{Handler, handle, _, _}|_], Handler, Req) ->
 	{Path, Req1} = cowboy_req:path(Req),
-	Req2 = cowboy_req:set_meta(response_status, 404, Req1),
+	Req2 = cowboy_req:set_meta(resp_status, 404, Req1),
 	Body = dtl(axiom_error_404, [{path, io_lib:format("~p", [Path])}]),
 	cowboy_req:set_resp_body(Body, Req2);
 
@@ -270,7 +270,7 @@ handle_error(Error, Reason, Stacktrace, Handler, Req) ->
 		true ->
 			process_response(Handler:error(Req), Req);
 		false -> 
-			Req1 = cowboy_req:set_meta(response_status, 500, Req),
+			Req1 = cowboy_req:set_meta(resp_status, 500, Req),
 			Body = dtl(axiom_error_500, [
 						{error, Error},
 						{reason, io_lib:format("~p", [Reason])},
