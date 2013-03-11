@@ -31,6 +31,7 @@ test-build:
 
 ct: clean test-build
 	$(REBAR) -C rebar.test.config ct skip_deps=true
+	cat /home/travis/build/tsujigiri/axiom/logs/raw.log
 
 build-plt:
 	$(DIALYZER) --build_plt --output_plt .$(PROJECT).plt \
