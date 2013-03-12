@@ -1,7 +1,7 @@
 {application, axiom,
  [
   {description, "a lightweight web framework"},
-  {vsn, "0.0.16"},
+  {vsn, "0.0.17"},
   {registered, []},
   {applications, [
                   kernel,
