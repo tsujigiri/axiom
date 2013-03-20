@@ -132,7 +132,7 @@ assemble_url(Path, Req) ->
 	Url = [
 		<<"http">>,
 		case cowboy_req:get(transport, Req2) of
-			cowboy_ssl_transport -> <<"s">>;
+			ranch_ssl -> <<"s">>;
 			_ -> <<>>
 		end,
 		<<"://">>,
@@ -190,7 +190,9 @@ chunk(Data, Req) ->
 -spec handle(cowboy_req:req(), #state{}) -> {ok, cowboy_req:req(), #state{}}.
 handle(Req, State) ->
 	Handler = State#state.handler,
-	Req2 = axiom_session:new(Req),
+	Req1 = axiom_session:new(Req),
+	Req2 = cowboy_req:set_resp_header(
+			<<"Content-Type">>, <<"text/html">>, Req1),
 	Req3 = try
 		call_handler(Handler, Req2)
 	catch Error:Reason ->

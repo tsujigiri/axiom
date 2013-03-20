@@ -4,7 +4,42 @@
 -include_lib("common_test/include/ct.hrl").
 
 
-all() -> [redirect].
+all() -> [
+		redirect,
+		redirect_non_get,
+		process_binary,
+		render_dtl,
+		render_dtl_with_params,
+		{group, with_defaults}
+		].
+
+groups() -> [
+		{with_defaults, [], [defaults]}
+		].
+
+%% groupless
+
+process_binary(_Config) ->
+	Req = build_request(),
+	Body = <<"<h1>It works!</h1>">>,
+	Req1 = axiom:process_response(Body, Req),
+	Body = cowboy_req:get(resp_body, Req1).
+
+render_dtl(_Config) ->
+	file:make_dir("templates"),
+	Template = "templates/my_template.dtl",
+	ok = file:write_file(Template, "<h1>It works!</h1>"),
+	ok = erlydtl:compile(Template, my_template_dtl),
+	[<<"<h1>It works!</h1>">>] = axiom:dtl(my_template).
+
+render_dtl_with_params(_Config) ->
+	file:make_dir("templates"),
+	Template = "templates/my_template.dtl",
+	ok = file:write_file(Template, "Hello {{who}} from {{from}}!"),
+	ok = erlydtl:compile(Template, my_template_dtl),
+	[<<"Hello ">>,<<"you">>,<<" from ">>,<<"me">>,<<"!">>] =
+		axiom:dtl(my_template,
+			[{<<"who">>, <<"you">>}, {<<"from">>, <<"me">>}]).
 
 redirect(_Config) ->
 	Req = build_request([{host, <<"example.com">>}]),
@@ -14,38 +49,36 @@ redirect(_Config) ->
 	<<"http://example.com/foo/bar">> =
 		iolist_to_binary(proplists:get_value(<<"Location">>, Headers)).
 
+redirect_non_get(_Config) ->
+	Req = build_request([{method, <<"POST">>}, {host, <<"example.com">>}]),
+	Req1 = axiom:redirect("/foo/bar", Req),
+	{303, _} = cowboy_req:meta(resp_status, Req1),
+	Headers = cowboy_req:get(resp_headers, Req1),
+	<<"http://example.com/foo/bar">> =
+		iolist_to_binary(proplists:get_value(<<"Location">>, Headers)).
 
-%	Req = #http_req{version = {1,1}, host = [<<"example">>, <<"com">>], port = 2342,
-%		method = 'GET'},
-%	#response{headers = Headers} = axiom:redirect("/foo/bar", Req),
-%	"http://example.com:2342/foo/bar" = proplists:get_value('Location', Headers),
-%	#response{status = 302, headers = Headers2} = axiom:redirect("http://example.org/foo/bar", Req),
-%	"http://example.org/foo/bar" = proplists:get_value('Location', Headers2),
-%	Req2 = #http_req{version = {1,1}, host = [<<"example">>, <<"com">>], port = 80,
-%		method = 'POST'},
-%	#response{status = 303, headers = Headers3} = axiom:redirect("/foo/bar", Req2),
-%	"http://example.com/foo/bar" = proplists:get_value('Location', Headers3).
-%
-%set_header_on_response(_Config) ->
-%	#response{headers = [{'Content-Type', <<"text/html">>}, {<<"X-Foo">>, <<"bar">>}]} =
-%		axiom:set_header(<<"X-Foo">>, <<"bar">>, #response{}).
-%
-%set_header_on_http_req(_Config) ->
-%	#http_req{resp_headers = [{<<"X-Foo">>, <<"bar">>}]} =
-%		axiom:set_header(<<"X-Foo">>, <<"bar">>, #http_req{}).
-%
+
+defaults(Config) ->
+	{ok, {Status, Headers, Body}} = httpc:request(
+			base_url(Config) ++ "default/content/type"),
+	{"HTTP/1.1",200,"OK"} = Status,
+	"ok" = Body,
+	"text/html" = proplists:get_value("content-type", Headers).
+
+
+
+
 %http_hello_world(Config) ->
 %	{ok, {Status, Headers, Body}} = httpc:request(base_url(Config)),
 %	{"HTTP/1.1",200,"OK"} = Status,
 %	"Hello world!" = Body,
 %	"text/html" = proplists:get_value("content-type", Headers).
-%
+
 %http_post_with_params(Config) ->
 %	{ok, {Status, _Headers, Body}} = httpc:request(post,
 %		{base_url(Config) ++ "things/?foo=bar", [], [], []}, [], []),
-%	"foo = bar" = Body,
-%	{"HTTP/1.1",403,"Forbidden"} = Status.
-%
+%	{"HTTP/1.1",200,"OK"} = Status.
+
 %http_not_found(Config) ->
 %	{ok, {Status, _Headers, Body}} =
 %		httpc:request(base_url(Config) ++ "do/not/find"),
@@ -136,15 +169,15 @@ redirect(_Config) ->
 %		{with_filters, [], [http_with_filters]}
 %	].
 %
-%init_per_suite(Config) ->
-%	inets:start(),
-%	Config.
+init_per_suite(Config) ->
+	inets:start(),
+	Config.
 %
-%end_per_suite(_Config) -> ok.
+end_per_suite(_Config) -> ok.
 %
-%init_per_group(with_defaults, Config) ->
-%	axiom:start(?MODULE),
-%	Config;
+init_per_group(with_defaults, Config) ->
+	axiom:start(?MODULE),
+	Config.
 %
 %init_per_group(with_options, Config) ->
 %	Options = [{port, 7655}],
@@ -172,8 +205,8 @@ redirect(_Config) ->
 %	axiom_app_with_filters:start(),
 %	Config.
 %
-%end_per_group(with_defaults, _Config) ->
-%	axiom:stop();
+end_per_group(with_defaults, _Config) ->
+	axiom:stop().
 %
 %end_per_group(with_options, _Config) ->
 %	axiom:stop();
@@ -195,14 +228,21 @@ redirect(_Config) ->
 %
 %% handlers
 %
-%handle('GET', [], _Request) ->
-%	<<"Hello world!">>;
-%
-%handle('POST', [<<"things">>], Request) ->
-%	[{Param, Value}] = axiom:params(Request),
-%	Body = <<Param/binary, " = ", Value/binary>>,
-%	#response{status = 403, body = Body};
-%
+handle(<<"GET">>, [<<"return">>, <<"binary">>], _Req) ->
+	<<"Hello world!">>;
+
+handle(<<"GET">>, [<<"return">>, <<"req">>], Req) ->
+	Req;
+
+handle(<<"GET">>, [<<"default">>, <<"content">>, <<"type">>], _Req) ->
+	<<"ok">>.
+
+%handle(<<"POST">>, [<<"things">>], Req) ->
+%	[{Param, Value}] = axiom:params(Req),
+%	Param = "foo",
+%	Value = "bar",
+%	Req.
+
 %handle('GET', [<<"template">>], Request) ->
 %	axiom:dtl(my_template, axiom:params(Request));
 %
@@ -231,17 +271,19 @@ redirect(_Config) ->
 %	{ok, _} = axiom:chunk(<<" world!">>, Req2),
 %	Req2.
 %
+
+
 %% helpers
-%
-%get_option(Opt, Config) ->
-%	Defaults = [{port, 7654}],
-%	case proplists:get_value(Opt, Config) of
-%		undefined -> proplists:get_value(Opt, Defaults);
-%		Else -> Else
-%	end.
-%
-%base_url(Config) ->
-%	"http://localhost:" ++ integer_to_list(get_option(port, Config)) ++ "/".
+
+get_option(Opt, Config) ->
+	Defaults = [{port, 7654}],
+	case proplists:get_value(Opt, Config) of
+		undefined -> proplists:get_value(Opt, Defaults);
+		Else -> Else
+	end.
+
+base_url(Config) ->
+	"http://localhost:" ++ integer_to_list(get_option(port, Config)) ++ "/".
 %
 %
 %receive_stream(ReceivedSoFar) ->
@@ -261,9 +303,9 @@ build_request(Params) ->
 	Socket = undefined,
 	Transport = ranch_tcp,
 	Peer = undefined,
-	Method = <<"GET">>,
-	Path = <<"/">>,
-	Query = undefined,
+	Method = proplists:get_value(method, Params, <<"GET">>),
+	Path = proplists:get_value(path, Params, <<"/">>),
+	Query = proplists:get_value(query, Params, undefined),
 	Fragment = undefined,
 	Version = {1,1},
 	Headers = [],
@@ -276,3 +318,4 @@ build_request(Params) ->
 	cowboy_req:new(Socket, Transport, Peer, Method, Path, Query, Fragment,
 		Version, Headers, Host, Port, Buffer, CanKeepalive,
 		Compress, OnResponse).
+
