@@ -1,7 +1,7 @@
 -module(axiom).
 -behaviour(cowboy_http_handler).
 
--ifdef(TEST).
+-ifdef(AXIOM_TEST).
 -compile(export_all).
 -endif.
 

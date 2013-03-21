@@ -27,7 +27,7 @@ clean-doc:
 test: ct dialyze doc
 
 test-build:
-	$(REBAR) -C rebar.test.config -DTEST compile
+	$(REBAR) -C rebar.test.config -DAXIOM_TEST compile
 
 ct: clean test-build
 	$(REBAR) -C rebar.test.config ct skip_deps=true
