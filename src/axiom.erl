@@ -1,6 +1,10 @@
 -module(axiom).
 -behaviour(cowboy_http_handler).
 
+-ifdef(TEST).
+-compile(export_all).
+-endif.
+
 % callbacks
 -export([init/3, handle/2, terminate/3]).
 

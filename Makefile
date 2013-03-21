@@ -27,7 +27,7 @@ clean-doc:
 test: ct dialyze doc
 
 test-build:
-	$(REBAR) -C rebar.test.config compile
+	$(REBAR) -C rebar.test.config -DTEST compile
 
 ct: clean test-build
 	$(REBAR) -C rebar.test.config ct skip_deps=true

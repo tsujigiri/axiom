@@ -66,8 +66,6 @@ defaults(Config) ->
 	"text/html" = proplists:get_value("content-type", Headers).
 
 
-
-
 %http_hello_world(Config) ->
 %	{ok, {Status, Headers, Body}} = httpc:request(base_url(Config)),
 %	{"HTTP/1.1",200,"OK"} = Status,
