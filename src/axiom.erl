@@ -10,7 +10,7 @@
 
 % api
 -export([start/1, start/2, stop/0, params/1, param/2, dtl/1, dtl/2, redirect/2,
-	chunk/2]).
+	chunk/2, chunk/3, set_resp_status/2, resp_status/1]).
 
 -record(state, {handler}).
 
@@ -165,14 +165,14 @@ param(Param, Req) ->
 
 
 %% @doc Initiates a chunked reply and sends chunked data.
-%% If you want to set a Content-Type other than `<<"text/html">>', do
+%% If you want to set a `Content-Type' other than `<<"text/html">>', do
 %% so with the third argument. Otherwise use {@link chunk/2}.
 -spec chunk(iodata(), cowboy_req:req(), binary()) -> {ok, cowboy_req:req()}.
 chunk(Data, Req, ContentType) when is_binary(Data) ->
 	Req2 = case cowboy_req:get(resp_state, Req) of
 		waiting ->
 			{ok, Req1} = cowboy_req:chunked_reply(200,
-					[{'Content-Type', ContentType}], Req),
+					[{<<"Content-Type">>, ContentType}], Req),
 			Pid = spawn(fun() -> stream_loop(Req1) end),
 			cowboy_req:set_meta(stream_loop_pid, Pid, Req1);
 		chunks -> Req
@@ -400,14 +400,4 @@ stream_loop(Req) ->
 			ok = cowboy_req:chunk(Data, Req),
 			stream_loop(Req)
 	end.
-
-%% @private
--spec join([binary()], binary()) -> binary().
-join([], _Sep) ->
-	[];
-join([Bin], _Sep) ->
-	Bin;
-join([Bin|Bins], Sep) ->
-	Rest = join(Bins, Sep),
-	<<Bin/binary, Sep/binary, Rest/binary>>.
 

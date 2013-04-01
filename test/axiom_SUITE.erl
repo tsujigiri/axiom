@@ -28,7 +28,8 @@ groups() -> [
 				http_render_template,
 				http_redirect,
 				http_redirect_relative,
-				http_respond_with_iolist
+				http_respond_with_iolist,
+				http_stream_data
 				]},
 		{with_custom_500, [], [http_custom_500]},
 		{static_files, [], [http_hello_static]},
@@ -181,14 +182,14 @@ http_set_and_get(Config) ->
 %	{"HTTP/1.1",200,"OK"} = Status,
 %	"It works!" = Body.
 %
-%http_stream_data(Config) ->
-%	{ok, _Ref} = httpc:request(get,
-%			{base_url(Config) ++ "stream", []}, [],
-%			[{sync, false}, {stream, self}]),
-%	Body = receive_stream([]),
-%	<<"Hello world!">> = Body.
-%
-%
+http_stream_data(Config) ->
+	{ok, _Ref} = httpc:request(get,
+			{base_url(Config) ++ "stream", []}, [],
+			[{sync, false}, {stream, self}]),
+	Body = receive_stream(),
+	<<"Hello world!">> = Body.
+
+
 %% suite
 %
 %all() -> [{group, with_defaults}, {group, with_options}, {group, session_ets},
@@ -323,13 +324,13 @@ handle(<<"GET">>, [<<"get">>], Req) ->
 	Foo;
 
 handle(<<"GET">>, [<<"fail">>], _Request) ->
-	foo = bar.
-%
-%handle('GET', [<<"stream">>], Req) ->
-%	{ok, Req2} = axiom:chunk(<<"Hello">>, Req),
-%	{ok, _} = axiom:chunk(<<" world!">>, Req2),
-%	Req2.
-%
+	foo = bar;
+
+handle(<<"GET">>, [<<"stream">>], Req) ->
+	{ok, Req2} = axiom:chunk(<<"Hello">>, Req),
+	{ok, _} = axiom:chunk(<<" world!">>, Req2),
+	Req2.
+
 
 
 %% helpers
@@ -343,15 +344,22 @@ get_option(Opt, Config) ->
 
 base_url(Config) ->
 	"http://localhost:" ++ integer_to_list(get_option(port, Config)) ++ "/".
-%
-%
-%receive_stream(ReceivedSoFar) ->
-%	receive
-%		{http, {_ReqId, stream_start, _Headers}} -> receive_stream(ReceivedSoFar);
-%		{http, {_ReqId, stream, BodyPart}} -> receive_stream([ReceivedSoFar, BodyPart]);
-%		{http, {_ReqId, stream_end, _Headers}} -> list_to_binary(ReceivedSoFar)
-%	after 1000 ->
-%		{error, timeout}
-%	end.
-%
+
+receive_stream() ->
+	receive_stream([]).
+
+receive_stream(ReceivedSoFar) ->
+	receive
+		{http, {_ReqId, stream_start, _Headers}} ->
+			receive_stream(ReceivedSoFar);
+		{http, {_ReqId, stream, BodyPart}} ->
+			receive_stream([ReceivedSoFar, BodyPart]);
+		{http, {_ReqId, stream_end, _Headers}} ->
+			list_to_binary(ReceivedSoFar);
+		Else ->
+			throw(Else)
+	after 1000 ->
+		{error, timeout}
+	end.
+
 
