@@ -12,6 +12,7 @@ all() -> [
 		process_response_binary,
 		process_response_tuple_2,
 		process_response_tuple_3,
+		get_query_param,
 		{group, with_defaults},
 		{group, with_custom_500},
 		{group, static_files},
@@ -74,6 +75,10 @@ redirect_non_get(_Config) ->
 	Headers = cowboy_req:get(resp_headers, Req1),
 	<<"http://example.com/foo/bar">> =
 		iolist_to_binary(proplists:get_value(<<"Location">>, Headers)).
+
+get_query_param(_Config) ->
+	Req = axiom_test_helper:build_request([{'query', <<"foo=bar">>}]),
+	{<<"bar">>, _} = axiom:param(<<"foo">>, Req).
 
 process_response_binary(_Config) ->
 	Req = axiom_test_helper:build_request(),
