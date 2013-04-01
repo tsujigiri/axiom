@@ -34,7 +34,7 @@ groups() -> [
 				http_stream_data
 				]},
 		{with_custom_500, [], [http_custom_500]},
-		{static_files, [], [http_hello_static]},
+		{static_files, [], [http_hello_static, http_root_to_index]},
 		{session_ets, [], [http_set_and_get]},
 		{with_filters, [], [http_with_filters]},
 		{with_options, [], [http_hello_world]}
@@ -166,9 +166,15 @@ http_respond_with_iolist(Config) ->
 
 http_hello_static(Config) ->
 	{ok, {Status, _Headers, Body}} =
-	httpc:request(get, {base_url(Config) ++ "html/index.html", []}, [],[]),
+	httpc:request(base_url(Config) ++ "html/works.html"),
 	{"HTTP/1.1",200,"OK"} = Status,
 	"<h1>It works!</h1>" = Body.
+
+http_root_to_index(Config) ->
+	{ok, {Status, _Headers, Body}} =
+	httpc:request(base_url(Config)),
+	{"HTTP/1.1",200,"OK"} = Status,
+	"<h1>Index</h1>" = Body.
 
 http_set_and_get(Config) ->
 	httpc:set_options([{cookies, enable}]),
@@ -222,7 +228,8 @@ init_per_group(with_options, Config) ->
 init_per_group(static_files, Config) ->
 	ok = file:make_dir("public"),
 	ok = file:make_dir("public/html"),
-	ok = file:write_file("public/html/index.html", "<h1>It works!</h1>"),
+	ok = file:write_file("public/html/works.html", "<h1>It works!</h1>"),
+	ok = file:write_file("public/index.html", "<h1>Index</h1>"),
 	ok = application:start(ranch),
 	ok = application:start(cowboy),
 	axiom:start(?MODULE),
@@ -259,7 +266,8 @@ end_per_group(with_options, _Config) ->
 	ok = application:stop(ranch);
 
 end_per_group(static_files, _Config) ->
-	ok = file:delete("public/html/index.html"),
+	ok = file:delete("public/html/works.html"),
+	ok = file:delete("public/index.html"),
 	ok = file:del_dir("public/html"),
 	ok = file:del_dir("public"),
 	axiom:stop(),

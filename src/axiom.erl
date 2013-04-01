@@ -350,24 +350,33 @@ atomify_keys([Head|Proplist]) ->
 static_dispatch() ->
 	{ok, PubDir} = application:get_env(axiom, public),
 	filelib:fold_files(PubDir, ".+", true, 
-		fun(File,Acc) ->
+		fun(File, Acc) ->
 				RelPath = File -- PubDir,
-				[static_dispatch(RelPath, PubDir) | Acc]
+				Acc1 = [static_dispatch(RelPath, PubDir) | Acc],
+				case RelPath =:= "/index.html" of
+					true -> [static_dispatch("/", RelPath, PubDir) | Acc1];
+					false -> Acc1
+				end
 		end,
 		[]).
+
+%% @private
+%% @equiv static_dispatch(Path, Path, Dir)
+static_dispatch(Path, Dir) ->
+	static_dispatch(Path, Path, Dir).
 
 %% @private
 %% @doc Constructs {@link //cowboy} dispatch configuration for given 
 %% static file
 -spec static_dispatch(string(),[string()]) -> [tuple()].
-static_dispatch(Path, Dir) ->
+static_dispatch(Path, DiskPath, Dir) ->
 	{
 		Path,
 		cowboy_static,
 		[
 			{directory, Dir},
 			{mimetypes, {fun mimetypes:path_to_mimes/2, default}},
-			{file, Path -- "/"}
+			{file, DiskPath -- "/"}
 		]
 	}.
 
