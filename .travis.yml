@@ -6,4 +6,4 @@ otp_release:
   - R15B01
   - R15B
 script: make ci
-after_script: cat /home/travis/build/tsujigiri/axiom/logs/raw.log
+after_script: cat logs/raw.log

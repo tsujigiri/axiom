@@ -10,7 +10,7 @@ build_request(Params) ->
 	Peer = undefined,
 	Method = proplists:get_value(method, Params, <<"GET">>),
 	Path = proplists:get_value(path, Params, <<"/">>),
-	Query = proplists:get_value(query, Params, undefined),
+	Query = proplists:get_value('query', Params, undefined),
 	Fragment = undefined,
 	Version = {1,1},
 	Headers = [],
