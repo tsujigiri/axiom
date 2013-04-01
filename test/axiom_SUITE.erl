@@ -15,12 +15,14 @@ all() -> [
 		{group, with_defaults},
 		{group, with_custom_500},
 		{group, static_files},
-		{group, session_ets}
+		{group, session_ets},
+		{group, with_filters},
+		{group, with_options}
 		].
 
 groups() -> [
 		{with_defaults, [], [
-				defaults,
+				http_hello_world,
 				http_post_with_query_params,
 				http_post_with_multipart_body,
 				http_not_found,
@@ -33,7 +35,9 @@ groups() -> [
 				]},
 		{with_custom_500, [], [http_custom_500]},
 		{static_files, [], [http_hello_static]},
-		{session_ets, [], [http_set_and_get]}
+		{session_ets, [], [http_set_and_get]},
+		{with_filters, [], [http_with_filters]},
+		{with_options, [], [http_hello_world]}
 		].
 
 %% groupless
@@ -92,7 +96,7 @@ process_response_tuple_3(_Config) ->
 	{500, _} = cowboy_req:meta(resp_status, Req1),
 	[{<<"Foo">>, <<"bar">>}] = cowboy_req:get(resp_headers, Req1).
 
-defaults(Config) ->
+http_hello_world(Config) ->
 	{ok, {Status, Headers, Body}} = httpc:request(
 			base_url(Config) ++ "defaults"),
 	{"HTTP/1.1",200,"OK"} = Status,
@@ -177,11 +181,11 @@ http_set_and_get(Config) ->
 	{"HTTP/1.1",200,"OK"} = Status1,
 	"bar" = Body1.
 
-%http_with_filters(Config) ->
-%	{ok, {Status, _Headers, Body}} = httpc:request(base_url(Config)),
-%	{"HTTP/1.1",200,"OK"} = Status,
-%	"It works!" = Body.
-%
+http_with_filters(Config) ->
+	{ok, {Status, _Headers, Body}} = httpc:request(base_url(Config)),
+	{"HTTP/1.1",200,"OK"} = Status,
+	"It works!" = Body.
+
 http_stream_data(Config) ->
 	{ok, _Ref} = httpc:request(get,
 			{base_url(Config) ++ "stream", []}, [],
@@ -190,24 +194,8 @@ http_stream_data(Config) ->
 	<<"Hello world!">> = Body.
 
 
-%% suite
-%
-%all() -> [{group, with_defaults}, {group, with_options}, {group, session_ets},
-%		  {group, with_custom_500}, {group, with_filters}, {group, static_files}].
-%
-%groups() -> [
-%		{with_defaults, [],
-%			[redirect, http_hello_world, http_not_found, http_post_with_params,
-%				http_render_template, http_redirect, http_respond_with_iolist,
-%				http_500, http_stream_data, set_header_on_response,
-%				set_header_on_http_req, http_redirect_relative]},
-%		{with_options, [], [http_hello_world]},
-%		{static_files, [], [http_hello_static]},
-%		{session_ets, [], [http_set_and_get]},
-%		{with_custom_500, [], [http_custom_500]},
-%		{with_filters, [], [http_with_filters]}
-%	].
-%
+%% callbacks
+
 init_per_suite(Config) ->
 	inets:start(),
 	ok = application:start(crypto),
@@ -223,12 +211,14 @@ init_per_group(with_defaults, Config) ->
 	ok = application:start(cowboy),
 	axiom:start(?MODULE),
 	Config;
-%
-%init_per_group(with_options, Config) ->
-%	Options = [{port, 7655}],
-%	axiom:start(?MODULE, Options),
-%	Options ++ Config;
-%
+
+init_per_group(with_options, Config) ->
+	Options = [{port, 7655}],
+	ok = application:start(ranch),
+	ok = application:start(cowboy),
+	axiom:start(?MODULE, Options),
+	Options ++ Config;
+
 init_per_group(static_files, Config) ->
 	ok = file:make_dir("public"),
 	ok = file:make_dir("public/html"),
@@ -250,20 +240,24 @@ init_per_group(with_custom_500, Config) ->
 	ok = application:start(ranch),
 	ok = application:start(cowboy),
 	axiom_error_test_app:start(),
+	Config;
+
+init_per_group(with_filters, Config) ->
+	ok = application:start(ranch),
+	ok = application:start(cowboy),
+	axiom_app_with_filters:start(),
 	Config.
-%
-%init_per_group(with_filters, Config) ->
-%	axiom_app_with_filters:start(),
-%	Config.
-%
+
 end_per_group(with_defaults, _Config) ->
 	axiom:stop(),
 	ok = application:stop(cowboy),
 	ok = application:stop(ranch);
-%
-%end_per_group(with_options, _Config) ->
-%	axiom:stop();
-%
+
+end_per_group(with_options, _Config) ->
+	axiom:stop(),
+	ok = application:stop(cowboy),
+	ok = application:stop(ranch);
+
 end_per_group(static_files, _Config) ->
 	ok = file:delete("public/html/index.html"),
 	ok = file:del_dir("public/html"),
@@ -280,13 +274,15 @@ end_per_group(session_ets, _Config) ->
 end_per_group(with_custom_500, _Config) ->
 	axiom:stop(),
 	ok = application:stop(cowboy),
+	ok = application:stop(ranch);
+
+end_per_group(with_filters, _Config) ->
+	axiom:stop(),
+	ok = application:stop(cowboy),
 	ok = application:stop(ranch).
-%
-%end_per_group(with_filters, _Config) ->
-%	axiom:stop().
-%
+
 %% handlers
-%
+
 handle(<<"GET">>, [<<"return">>, <<"binary">>], _Req) ->
 	<<"Hello world!">>;
 
