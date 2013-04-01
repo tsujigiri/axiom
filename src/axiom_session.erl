@@ -27,19 +27,16 @@ start_link() ->
 %% Called by {@link axiom:handle/3} when sessions are configured.
 -spec new(cowboy_req:req()) -> cowboy_req:req().
 new(Req) ->
-	case application:get_env(axiom, sessions) of
-		undefined -> Req;
-		{ok, _Config} -> 
-			SessionId = case cowboy_req:cookie(<<"SessionId">>, Req) of
-				{undefined, _} -> new_id();
-				{ExistingId, _} -> ExistingId
-			end,
-			{ok, Req2} = cowboy_req:set_resp_cookie(
-					<<"SessionId">>, SessionId, cookie_attributes(), Req),
-			Req3 = cowboy_req:set_meta(session_id, SessionId, Req2),
-			ok = gen_server:call(?MODULE, {new, [SessionId, Req3]}),
-			Req3
-	end.
+	{ExistingId, Req1} = cowboy_req:cookie(<<"session_id">>, Req),
+	SessionId = case ExistingId of
+		undefined -> new_id();
+		_ -> ExistingId
+	end,
+	Req2 = cowboy_req:set_resp_cookie(
+			<<"session_id">>, SessionId, cookie_attributes(), Req1),
+	Req3 = cowboy_req:set_meta(session_id, SessionId, Req2),
+	ok = gen_server:call(?MODULE, {new, [SessionId, Req3]}),
+	Req3.
 
 
 %% @doc Sets a value in the session.

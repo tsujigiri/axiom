@@ -47,9 +47,9 @@ start(Handler, Options) ->
 	{ok, Path} = application:get_env(?MODULE, path),
 	Dispatch = cowboy_router:compile(
 			[{Host, static_dispatch() ++ [{Path, ?MODULE, [Handler]}]}]),
-	ok = application:start(crypto),
-	ok = application:start(ranch),
-	ok = application:start(cowboy),
+	%ok = application:start(crypto),
+	%ok = application:start(ranch),
+	%ok = application:start(cowboy),
 	ok = case application:get_env(axiom, sessions) of
 		{ok, _} -> application:start(axiom);
 		_ -> ok
@@ -64,7 +64,7 @@ start(Handler, Options) ->
 %% @doc Stops axiom.
 -spec stop() -> ok.
 stop() ->
-	application:stop(cowboy),
+	%application:stop(cowboy),
 	case application:get_env(axiom, sessions) of
 		undefined -> application:unload(axiom);
 		_ -> application:stop(axiom)
@@ -185,6 +185,16 @@ chunk(Data, Req, ContentType) when is_binary(Data) ->
 chunk(Data, Req) ->
 	chunk(Data, Req, <<"text/html">>).
 
+%% @doc Sets the response status code.
+-spec set_resp_status(non_neg_integer(), cowboy_req:req()) -> cowboy_req:req().
+set_resp_status(Status, Req) ->
+	cowboy_req:set_meta(resp_status, Status, Req).
+
+%% @doc Gets the response status code.
+-spec resp_status(cowboy_req:req()) -> {non_neg_integer(), cowboy_req:req()}.
+resp_status(Req) ->
+	cowboy_req:meta(resp_status, Req).
+
 
 %% CALLBACKS
 
@@ -194,7 +204,10 @@ chunk(Data, Req) ->
 -spec handle(cowboy_req:req(), #state{}) -> {ok, cowboy_req:req(), #state{}}.
 handle(Req, State) ->
 	Handler = State#state.handler,
-	Req1 = axiom_session:new(Req),
+	Req1 = case application:get_env(axiom, sessions) of
+		undefined -> Req;
+		{ok, _} -> axiom_session:new(Req)
+	end,
 	Req2 = cowboy_req:set_resp_header(
 			<<"Content-Type">>, <<"text/html">>, Req1),
 	Req3 = try
@@ -234,7 +247,6 @@ init({tcp, http}, Req, [Handler]) ->
 terminate(_Reason, _Req, _State) ->
 	ok.
 
-
 %% INTERNAL FUNCTIONS
 
 %% @private
@@ -246,7 +258,7 @@ call_handler(Handler, Req) ->
 	{Path, Req2} = cowboy_req:path(Req1),
 	Req3 = case erlang:function_exported(Handler, before_filter, 1) of
 		true -> Handler:before_filter(Req2);
-		false -> Req
+		false -> Req2
 	end,
 	SplitPath = case binary:split(Path, <<"/">>, [global, trim]) of
 		[<<>> | Rest] -> Rest;
@@ -265,7 +277,7 @@ call_handler(Handler, Req) ->
 %% `after_filter/2' and `handle/3' functions.
 -spec handle_error(atom(), any(), [tuple()], module(), cowboy_req:req()) ->
 	cowboy_req:req().
-handle_error(error, function_clause, [{Handler, handle, _, _}|_], Handler, Req) ->
+handle_error(error, function_clause, [{Handler, handle, _, _} | _], Handler, Req) ->
 	{Path, Req1} = cowboy_req:path(Req),
 	Req2 = cowboy_req:set_meta(resp_status, 404, Req1),
 	Body = dtl(axiom_error_404, [{path, io_lib:format("~p", [Path])}]),
@@ -290,11 +302,25 @@ handle_error(Error, Reason, Stacktrace, Handler, Req) ->
 
 %% @private
 %% @doc Processes the output of `Handler:handle/3'
--spec process_response(cowboy_req:req(), cowboy_req:req()) -> cowboy_req:req();
-	                  (iolist(), cowboy_req:req()) -> cowboy:req().
+-spec process_response({non_neg_integer(), [tuple()], iolist()}, cowboy_req:req()) -> cowboy_req:req();
+                      ({non_neg_integer(), iolist()}, cowboy_req:req()) -> cowboy_req:req();
+	                  (iolist(), cowboy_req:req()) -> cowboy:req();
+	                  (cowboy_req:req(), cowboy_req:req()) -> cowboy_req:req().
 
-process_response(Resp, Req) when is_binary(Resp); is_list(Resp) ->
-	cowboy_req:set_resp_body(Resp, Req);
+
+process_response({Status, [], Body}, Req) ->
+	process_response({Status, Body}, Req);
+
+process_response({Status, [{Key,Value}|Headers], Body}, Req) ->
+	Req1 = cowboy_req:set_resp_header(Key, Value, Req),
+	process_response({Status, Headers, Body}, Req1);
+
+process_response({Status, Body}, Req) when is_integer(Status) ->
+	Req1 = set_resp_status(Status, Req),
+	process_response(Body, Req1);
+
+process_response(Body, Req) when is_binary(Body); is_list(Body) ->
+	cowboy_req:set_resp_body(Body, Req);
 
 process_response(Req, _) ->
 	Req.
