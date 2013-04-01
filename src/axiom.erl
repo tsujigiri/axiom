@@ -159,9 +159,10 @@ params(Req) ->
 
 
 %% @doc extracts a specific param from a `cowboy_req:req()'.
--spec param(binary(), cowboy_req:req()) -> binary().
+-spec param(binary(), cowboy_req:req()) -> {binary(), cowboy_req:req()}.
 param(Param, Req) ->
-	proplists:get_value(Param, params(Req)).
+	{Params, Req1} = params(Req),
+	{proplists:get_value(Param, Params), Req1}.
 
 
 %% @doc Initiates a chunked reply and sends chunked data.
@@ -362,13 +363,14 @@ static_dispatch() ->
 
 %% @private
 %% @equiv static_dispatch(Path, Path, Dir)
+-spec static_dispatch(string(), string() | tuple()) -> tuple().
 static_dispatch(Path, Dir) ->
 	static_dispatch(Path, Path, Dir).
 
 %% @private
 %% @doc Constructs {@link //cowboy} dispatch configuration for given 
 %% static file
--spec static_dispatch(string(),[string()]) -> [tuple()].
+-spec static_dispatch(string(), string(), string() | tuple()) -> tuple().
 static_dispatch(Path, DiskPath, Dir) ->
 	{
 		Path,

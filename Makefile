@@ -35,7 +35,7 @@ ct: clean test-build
 build-plt:
 	$(DIALYZER) --build_plt --output_plt .$(PROJECT).plt \
 		--apps kernel stdlib sasl inets crypto public_key ssl \
-		./deps/cowboy/ebin ./deps/erlydtl/ebin
+		./deps/ranch/ebin ./deps/cowboy/ebin ./deps/erlydtl/ebin
 
 dialyze: clean deps test-build
 	$(DIALYZER) --plt .$(PROJECT).plt ebin
