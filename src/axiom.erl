@@ -1,16 +1,17 @@
 -module(axiom).
 -behaviour(cowboy_http_handler).
 
--ifdef(AXIOM_TEST).
--compile(export_all).
--endif.
-
 % callbacks
 -export([init/3, handle/2, terminate/3]).
 
 % api
 -export([start/1, start/2, stop/0, params/1, param/2, dtl/1, dtl/2, redirect/2,
 	chunk/2, chunk/3, set_resp_status/2, resp_status/1]).
+
+% test proxies
+-ifdef(AXIOM_TEST).
+-export([process_response_proxy/2]).
+-endif.
 
 -record(state, {handler}).
 
@@ -411,4 +412,13 @@ stream_loop(Req) ->
 			ok = cowboy_req:chunk(Data, Req),
 			stream_loop(Req)
 	end.
+
+
+%% test proxies
+
+-ifdef(AXIOM_TEST).
+
+process_response_proxy(Resp, Req) -> process_response(Resp, Req).
+
+-endif.
 

@@ -83,20 +83,20 @@ get_query_param(_Config) ->
 process_response_binary(_Config) ->
 	Req = axiom_test_helper:build_request(),
 	Body = <<"<h1>It works!</h1>">>,
-	Req1 = axiom:process_response(Body, Req),
+	Req1 = axiom:process_response_proxy(Body, Req),
 	Body = cowboy_req:get(resp_body, Req1).
 
 process_response_tuple_2(_Config) ->
 	Req = axiom_test_helper:build_request(),
 	Resp = {500, <<"<h1>It doesn't work!</h1>">>},
-	Req1 = axiom:process_response(Resp, Req),
+	Req1 = axiom:process_response_proxy(Resp, Req),
 	<<"<h1>It doesn't work!</h1>">> = cowboy_req:get(resp_body, Req1),
 	{500, _} = cowboy_req:meta(resp_status, Req1).
 
 process_response_tuple_3(_Config) ->
 	Req = axiom_test_helper:build_request(),
 	Resp = {500, [{<<"Foo">>, <<"bar">>}], <<"<h1>It doesn't work!</h1>">>},
-	Req1 = axiom:process_response(Resp, Req),
+	Req1 = axiom:process_response_proxy(Resp, Req),
 	<<"<h1>It doesn't work!</h1>">> = cowboy_req:get(resp_body, Req1),
 	{500, _} = cowboy_req:meta(resp_status, Req1),
 	[{<<"Foo">>, <<"bar">>}] = cowboy_req:get(resp_headers, Req1).
