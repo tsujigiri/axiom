@@ -16,18 +16,19 @@ A minimal application would look like this:
 start() ->
 	axiom:start(?MODULE).
 
-handle('GET', [<<"hi">>], _Request) ->
+handle(<<"GET">>, [<<"hi">>], _Request) ->
 	<<"Hello world!">>.
 
 ```
 
 This handles requests for `GET /hi` and returns "Hello world!".
 
-The third argument given to the handler is of type `cowboy_req:req()`.
+The third argument given to the handler is of type `cowboy_req:req()`. Use the
+`cowboy_req` module, if you need anything from the request.
 
 The return value can be a binary string or iolist. If you want to specify a
 response status code and/or headers, use a tuple with either the status code
-and body or status code, headers and body, in these orders respectively.
+and body or status code, headers and body, in these respective orders.
 
 Examples:
 
@@ -42,7 +43,24 @@ or
 As a third option a `cowboy_req:req()` can be returned. In this case, to set the
 response headers and body, use the `cowboy_req:set_resp_header/3` and
 `cowboy_req:set_resp_body/2` functions. To set the status code, use
-`axiom:set_resp_status/2`.
+`axiom:set_resp_status/2`. These funcions return a new `cowboy_req:req()` to be
+used further and to be returned from `YourHandler:handle/3`.
+
+The full spec of `YourHandler:handle/3` is expected to look like this:
+
+```erlang
+handle(Method, Path, Req) -> Body | Req | {Status, Body} | {Status, Headers, Body}.
+
+  Types:
+    Method = <<"GET">> | <<"POST">> | <<"PUT">> | <<"DELETE">> | ...
+    Path = [PathSegment]
+    PathSegment = binary()
+    Req = cowboy_req:req()
+    Body = iodata()
+    Status = non_neg_integer()
+    Headers = [Header]
+    Header = {binary(), binary()}
+```
 
 ## Request parameters
 
@@ -50,7 +68,6 @@ To get the request parameters out of the request, you can use the two
 handy functions `axiom:params(Req)` and `axiom:param(Name, Req)`.
 The first returns a proplist of all parameters, the second one returns
 the named parameter's value.
-
 
 ## Configuration
 
@@ -67,15 +84,13 @@ are as follows:
 ]
 ```
 
-
 ## Static Files
 
-Static files are served via the `cowboy_http_static` handler. 
-By default, every file in ./public directory and all its subdirectories
-will be made accessible via URL path the same as file's relative path. 
-E.g. the file `./public/about.html` can be accessed via 
-`GET /about.html`. **Note**: Currently, if the contents of the ./public subtree
-change, Axiom needs to be restarted to reflect the change.
+Static files are served via the `cowboy_static` handler. By default, every file
+in the ./public directory and all its subdirectories will be made accessible via
+URL path the same as file's relative path. E.g. the file `./public/about.html`
+can be accessed via `GET /about.html`. **Note**: Currently, if the contents of
+the ./public subtree change, Axiom needs to be restarted to reflect the change.
 
 You can specify a custom directory via the `public` option.
 
@@ -89,11 +104,11 @@ Rule of thumb is to use your machine's number of CPU cores.
 You can redirect requests with `redirect/2`:
 
 ```erlang
-handle('GET', [<<"foo">>], Req) ->
+handle(<<"GET">>, [<<"foo">>], Req) ->
 	Req1 = axiom:redirect("/bar", Req),
   Req;
 
-handle('GET', [<<"bar">>], Request) ->
+handle(<<"GET">>, [<<"bar">>], Request) ->
 	<<"<h1>Welcome back!</h1>">>.
 ```
 
@@ -111,7 +126,7 @@ in it, create a template, e.g. `my_template.dtl`:
 In your handler, specify the template to be rendered:
 
 ```erlang
-handle('GET', [<<"hello">>], _Request) ->
+handle(<<"GET">>, [<<"hello">>], _Request) ->
 	axiom:dtl(my_template, [{who, "you"}]).
 ```
 
@@ -231,7 +246,7 @@ chunk(Data::iodata(), #http_req{}, Type::binary()) -> {ok, #http_req{}}.
 ### Example
 
 ```erlang
-handle('GET', [<<"stream">>], Req) ->
+handle(<<"GET">>, [<<"stream">>], Req) ->
 	{ok, Req2} = axiom:chunk(<<"Hello">>, Req, <<"text/plain">>),
 	{ok, _} = axiom:chunk(<<" world">>, Req2),
 	{ok, _} = axiom:chunk(<<"!">>, Req2),
@@ -245,7 +260,7 @@ To use it in your OTP application, add this to your `rebar.config`:
 ```erlang
 {lib_dirs, ["deps"]}.
 {deps, [
-	{'axiom', "0.0.16", {git, "git://github.com/tsujigiri/axiom.git", {tag, "v0.0.16"}}}
+	{'axiom', "0.1.0", {git, "git://github.com/tsujigiri/axiom.git", {tag, "v0.1.0"}}}
 ]}.
 ```
 
