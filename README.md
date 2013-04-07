@@ -218,7 +218,7 @@ handler:
 
 ```erlang
 handle(_Method, _Path, _Req) ->
-	#response{status = 404, body = <<"nope.">>}.
+	{404, <<"nope.">>}.
 ```
 
 Note that you have to take care of the status code yourself, as
