@@ -18,6 +18,7 @@ all() -> [
 		{group, static_files},
 		{group, session_ets},
 		{group, with_filters},
+		{group, redirect_in_before_filter},
 		{group, with_options}
 		].
 
@@ -38,7 +39,8 @@ groups() -> [
 		{static_files, [], [http_hello_static, http_root_to_index]},
 		{session_ets, [], [http_set_and_get]},
 		{with_filters, [], [http_with_filters]},
-		{with_options, [], [http_hello_world]}
+		{with_options, [], [http_hello_world]},
+		{redirect_in_before_filter, [], [http_redirect_in_before_filter]}
 		].
 
 %% groupless
@@ -150,14 +152,14 @@ http_render_template(Config) ->
 
 http_redirect(Config) ->
 	{ok, {Status, Headers, _Body}} =
-	httpc:request(get, {base_url(Config) ++ "where/are/you", []},
+		httpc:request(get, {base_url(Config) ++ "where/are/you", []},
 			[{autoredirect, false}],[]),
 	{"HTTP/1.1",302,"Found"} = Status,
 	"http://example.com/over/here" = proplists:get_value("location", Headers).
 
 http_redirect_relative(Config) ->
 	{ok, {Status, Headers, _Body}} =
-	httpc:request(get, {base_url(Config) ++ "where/am/i", []},
+		httpc:request(get, {base_url(Config) ++ "where/am/i", []},
 			[{autoredirect, false}],[]),
 	{"HTTP/1.1",302,"Found"} = Status,
 	Expect = base_url(Config) ++ "some/strange/place/?p=yes",
@@ -204,6 +206,10 @@ http_stream_data(Config) ->
 	Body = receive_stream(),
 	<<"Hello world!">> = Body.
 
+http_redirect_in_before_filter(Config) ->
+	{ok, {Status, _Headers, _Body}} =
+		httpc:request(get, {base_url(Config), []}, [{autoredirect, false}], []),
+	{"HTTP/1.1",302,"Found"} = Status.
 
 %% callbacks
 
@@ -220,14 +226,14 @@ end_per_suite(_Config) ->
 init_per_group(with_defaults, Config) ->
 	ok = application:start(ranch),
 	ok = application:start(cowboy),
-	axiom:start(?MODULE),
+	{ok, _} = axiom:start(?MODULE),
 	Config;
 
 init_per_group(with_options, Config) ->
 	Options = [{port, 7655}],
 	ok = application:start(ranch),
 	ok = application:start(cowboy),
-	axiom:start(?MODULE, Options),
+	{ok, _} = axiom:start(?MODULE, Options),
 	Options ++ Config;
 
 init_per_group(static_files, Config) ->
@@ -237,7 +243,7 @@ init_per_group(static_files, Config) ->
 	ok = file:write_file("public/index.html", "<h1>Index</h1>"),
 	ok = application:start(ranch),
 	ok = application:start(cowboy),
-	axiom:start(?MODULE),
+	{ok, _} = axiom:start(?MODULE),
 	Config;
 
 init_per_group(session_ets, Config) ->
@@ -245,19 +251,25 @@ init_per_group(session_ets, Config) ->
 	ok = httpc:set_options([{cookies, enabled}]),
 	ok = application:start(ranch),
 	ok = application:start(cowboy),
-	axiom:start(?MODULE, Options),
+	{ok, _} = axiom:start(?MODULE, Options),
 	Options ++ Config;
 
 init_per_group(with_custom_500, Config) ->
 	ok = application:start(ranch),
 	ok = application:start(cowboy),
-	axiom_error_test_app:start(),
+	{ok, _} = axiom_error_test_app:start(),
 	Config;
 
 init_per_group(with_filters, Config) ->
 	ok = application:start(ranch),
 	ok = application:start(cowboy),
-	axiom_app_with_filters:start(),
+	{ok, _} = axiom_app_with_filters:start(),
+	Config;
+
+init_per_group(redirect_in_before_filter, Config) ->
+	ok = application:start(ranch),
+	ok = application:start(cowboy),
+	{ok, _} = axiom_app_redirect_in_before_filter:start(),
 	Config.
 
 end_per_group(with_defaults, _Config) ->
@@ -282,7 +294,8 @@ end_per_group(static_files, _Config) ->
 end_per_group(session_ets, _Config) ->
 	axiom:stop(),
 	ok = application:stop(cowboy),
-	ok = application:stop(ranch);
+	ok = application:stop(ranch),
+	ok = httpc:set_options([{cookies, disabled}]);
 
 end_per_group(with_custom_500, _Config) ->
 	axiom:stop(),
@@ -290,6 +303,11 @@ end_per_group(with_custom_500, _Config) ->
 	ok = application:stop(ranch);
 
 end_per_group(with_filters, _Config) ->
+	axiom:stop(),
+	ok = application:stop(cowboy),
+	ok = application:stop(ranch);
+
+end_per_group(redirect_in_before_filter, _Config) ->
 	axiom:stop(),
 	ok = application:stop(cowboy),
 	ok = application:stop(ranch).
@@ -339,7 +357,6 @@ handle(<<"GET">>, [<<"stream">>], Req) ->
 	{ok, Req2} = axiom:chunk(<<"Hello">>, Req),
 	{ok, _} = axiom:chunk(<<" world!">>, Req2),
 	Req2.
-
 
 
 %% helpers

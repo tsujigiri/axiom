@@ -48,9 +48,6 @@ start(Handler, Options) ->
 	{ok, Path} = application:get_env(?MODULE, path),
 	Dispatch = cowboy_router:compile(
 			[{Host, static_dispatch() ++ [{Path, ?MODULE, [Handler]}]}]),
-	%ok = application:start(crypto),
-	%ok = application:start(ranch),
-	%ok = application:start(cowboy),
 	ok = case application:get_env(axiom, sessions) of
 		{ok, _} -> application:start(axiom);
 		_ -> ok
@@ -65,7 +62,6 @@ start(Handler, Options) ->
 %% @doc Stops axiom.
 -spec stop() -> ok.
 stop() ->
-	%application:stop(cowboy),
 	case application:get_env(axiom, sessions) of
 		undefined -> application:unload(axiom);
 		_ -> application:stop(axiom)
@@ -262,16 +258,21 @@ call_handler(Handler, Req) ->
 		true -> Handler:before_filter(Req2);
 		false -> Req2
 	end,
-	SplitPath = case binary:split(Path, <<"/">>, [global, trim]) of
-		[<<>> | Rest] -> Rest;
-		Else -> Else
-	end,
-	Req4 = process_response(Handler:handle(Method, SplitPath, Req3), Req3),
-	Req5 = case erlang:function_exported(Handler, after_filter, 2) of
-		true -> Handler:after_filter(Req4);
-		false -> Req4
-	end,
-	Req5.
+	{Status, Req4} = cowboy_req:meta(resp_status, Req3),
+	case lists:member(Status, [302, 303]) of
+		false ->
+			SplitPath = case binary:split(Path, <<"/">>, [global, trim]) of
+				[<<>> | Rest] -> Rest;
+				Else -> Else
+			end,
+			Req5 = process_response(Handler:handle(Method, SplitPath, Req4), Req4),
+			Req6 = case erlang:function_exported(Handler, after_filter, 2) of
+				true -> Handler:after_filter(Req5);
+				false -> Req5
+			end,
+			Req6;
+		true -> Req4
+	end.
 
 
 %% @private
