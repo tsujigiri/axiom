@@ -24,11 +24,18 @@ handle(<<"GET">>, [<<"hi">>], _Request) ->
 This handles requests for `GET /hi` and returns "Hello world!".
 
 The third argument given to the handler is of type `cowboy_req:req()`. Use the
-`cowboy_req` module, if you need anything from the request.
+`cowboy_req` module, if you need anything out of the request.
 
-The return value can be a binary string or iolist. If you want to specify a
-response status code and/or headers, use a tuple with either the status code
-and body or status code, headers and body, in these respective orders.
+The return value can be a binary string or iolist. So, this also works:
+
+```erlang
+handle(<<"GET">>, [<<"hello">>, Who], _Request) ->
+	[<<"Hello ">>, Who, <<"!">>].
+```
+
+If you want to specify a response status code and/or headers, use a tuple with
+either the status code and body or status code, headers and body, in these
+respective orders.
 
 Examples:
 
@@ -43,7 +50,7 @@ or
 As a third option a `cowboy_req:req()` can be returned. In this case, to set the
 response headers and body, use the `cowboy_req:set_resp_header/3` and
 `cowboy_req:set_resp_body/2` functions. To set the status code, use
-`axiom:set_resp_status/2`. These funcions return a new `cowboy_req:req()` to be
+`axiom:set_resp_status/2`. These functions return a new `cowboy_req:req()` to be
 used further and to be returned from `YourHandler:handle/3`.
 
 The full spec of `YourHandler:handle/3` is expected to look like this:
@@ -52,7 +59,7 @@ The full spec of `YourHandler:handle/3` is expected to look like this:
 handle(Method, Path, Req) -> Body | Req | {Status, Body} | {Status, Headers, Body}.
 
   Types:
-    Method = <<"GET">> | <<"POST">> | <<"PUT">> | <<"DELETE">> | ...
+    Method = binary(),
     Path = [PathSegment]
     PathSegment = binary()
     Req = cowboy_req:req()
@@ -67,7 +74,7 @@ handle(Method, Path, Req) -> Body | Req | {Status, Body} | {Status, Headers, Bod
 To get the request parameters out of the request, you can use the two
 handy functions `axiom:params(Req)` and `axiom:param(Name, Req)`.
 The first returns a proplist of all parameters, the second one returns
-the named parameter's value.
+the named parameter's value. Keys and values are binary strings.
 
 ## Configuration
 
@@ -247,10 +254,10 @@ chunk(Data::iodata(), #http_req{}, Type::binary()) -> {ok, #http_req{}}.
 
 ```erlang
 handle(<<"GET">>, [<<"stream">>], Req) ->
-	{ok, Req2} = axiom:chunk(<<"Hello">>, Req, <<"text/plain">>),
-	{ok, _} = axiom:chunk(<<" world">>, Req2),
-	{ok, _} = axiom:chunk(<<"!">>, Req2),
-	Req2.
+	{ok, Req1} = axiom:chunk(<<"Hello">>, Req, <<"text/plain">>),
+	{ok, Req2} = axiom:chunk(<<" world">>, Req1),
+	{ok, Req3} = axiom:chunk(<<"!">>, Req2),
+	Req3.
 ```
 
 ## Installation
@@ -274,3 +281,4 @@ rebar compile
 ## License
 
 Please take a look at the `LICENSE` file! (tl;dr: it's the MIT License)
+
