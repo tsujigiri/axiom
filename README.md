@@ -192,10 +192,10 @@ module.
 
 ## Filters
 
-The functions `before_filter/1` and `after_filter/2` can be implemented
-to deal with the `http_req` and (in the `after_filter`) the `response`
-records. When implemented, these are called no matter which `handle/3`
-matches the request.
+The functions `before_filter/1` and `after_filter/1` can be implemented
+to deal with the `cowboy_req:req()` before and after `YourHandler:handle/3`.
+When implemented, these are called no matter which `handle` function matches the
+request.
 
 In your handler module:
 
@@ -204,9 +204,9 @@ before_filter(Req) ->
 	% do stuff
 	Req.
 
-after_filter(Resp, Req) ->
+after_filter(Req) ->
 	% do more stuff
-	{Resp, Req}.
+	Req.
 ```
 
 ## Errors
@@ -227,7 +227,7 @@ otherwise the default of 200 is sent back to the client.
 ### Internal Server Error
 
 To handle these yourself, you can implement a function named `error/1`.
-The argument is the `http_req` record, otherwise it works like your
+The argument is the `cowboy_req:req()` object, otherwise it works like your
 `Handler:handle/3` function.
 
 ## Streaming
@@ -235,10 +235,10 @@ The argument is the `http_req` record, otherwise it works like your
 To send a chunked reply, call `axiom:chunk/2` for each chunk:
 
 ```erlang
-chunk(Data::iodata(), #http_req{}) -> {ok, #http_req{}}.
+chunk(Data::iodata(), Req::cowboy_req:req()) -> {ok, Req1::cowboy_req:req()}.
 ```
 
-The returned `http_req` record has to be given as an argument to
+The returned `cowboy_req:req()` object has to be given as an argument to
 subsequent calls to `chunk` and as the return value of your
 `Handler:handle/3` function.
 
@@ -247,7 +247,7 @@ To stream data with a Content-Type other than `text/html`, use
 want:
 
 ```erlang
-chunk(Data::iodata(), #http_req{}, Type::binary()) -> {ok, #http_req{}}.
+chunk(Data::iodata(), Req::cowboy_req:req(), Type::binary()) -> {ok, Req1::cowboy_req:req()}.
 ```
 
 ### Example
