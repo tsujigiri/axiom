@@ -8,8 +8,6 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
 	terminate/2, code_change/3]).
 
--include_lib("cowboy/include/http.hrl").
--include_lib("axiom/include/response.hrl").
 
 -record(state, {session_store, session_state}).
 
@@ -27,36 +25,32 @@ start_link() ->
 %% @doc Creates a new session.
 %% 
 %% Called by {@link axiom:handle/3} when sessions are configured.
--spec new(#http_req{}) -> #http_req{}.
+-spec new(cowboy_req:req()) -> cowboy_req:req().
 new(Req) ->
-	case application:get_env(axiom, sessions) of
-		undefined -> Req;
-		{ok, _Config} -> 
-			SessionId = case cowboy_http_req:cookie(<<"SessionId">>, Req) of
-				{undefined, _} -> new_id();
-				{ExistingId, _} -> ExistingId
-			end,
-			{ok, Req2} = cowboy_http_req:set_resp_cookie(
-					<<"SessionId">>, SessionId, cookie_attributes(), Req),
-			Meta = lists:keystore(session_id, 1, Req2#http_req.meta, {session_id, SessionId}),
-			Req3 = Req2#http_req{meta = Meta},
-			ok = gen_server:call(?MODULE, {new, [SessionId, Req3]}),
-			Req3
-	end.
+	{ExistingId, Req1} = cowboy_req:cookie(<<"session_id">>, Req),
+	SessionId = case ExistingId of
+		undefined -> new_id();
+		_ -> ExistingId
+	end,
+	Req2 = cowboy_req:set_resp_cookie(
+			<<"session_id">>, SessionId, cookie_attributes(), Req1),
+	Req3 = cowboy_req:set_meta(session_id, SessionId, Req2),
+	ok = gen_server:call(?MODULE, {new, [SessionId, Req3]}),
+	Req3.
 
 
 %% @doc Sets a value in the session.
--spec set(any(), any(), #http_req{}) -> any().
+-spec set(any(), any(), cowboy_req:req()) -> any().
 set(Key, Value, Req) ->
 	gen_server:call(?MODULE, {set, [Key, Value, Req]}).
 
 %% @doc Gets a value from the session.
--spec get(any(), #http_req{}) -> any().
+-spec get(any(), cowboy_req:req()) -> any().
 get(Key, Req) ->
 	gen_server:call(?MODULE, {get, [Key, Req]}).
 
 %% @doc Deletes a session.
--spec delete(#http_req{}) -> any().
+-spec delete(cowboy_req:req()) -> any().
 delete(Req) ->
 	gen_server:call(?MODULE, {delete, [Req]}).
 

@@ -27,7 +27,7 @@ clean-doc:
 test: ct dialyze doc
 
 test-build:
-	$(REBAR) -C rebar.test.config compile
+	$(REBAR) -C rebar.test.config -DAXIOM_TEST compile
 
 ct: clean test-build
 	$(REBAR) -C rebar.test.config ct skip_deps=true
@@ -35,7 +35,7 @@ ct: clean test-build
 build-plt:
 	$(DIALYZER) --build_plt --output_plt .$(PROJECT).plt \
 		--apps kernel stdlib sasl inets crypto public_key ssl \
-		./deps/cowboy/ebin ./deps/erlydtl/ebin
+		./deps/ranch/ebin ./deps/cowboy/ebin ./deps/erlydtl/ebin
 
 dialyze: clean deps test-build
 	$(DIALYZER) --plt .$(PROJECT).plt ebin

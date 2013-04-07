@@ -16,55 +16,65 @@ A minimal application would look like this:
 start() ->
 	axiom:start(?MODULE).
 
-handle('GET', [<<"hi">>], _Request) ->
+handle(<<"GET">>, [<<"hi">>], _Request) ->
 	<<"Hello world!">>.
 
 ```
 
 This handles requests for `GET /hi` and returns "Hello world!".
 
-The third argument, given to the handler contains a record of type
-`http_req`, [as known from Cowboy](https://github.com/extend/cowboy/blob/0c2e2224e372f01e6cf51a8e12d4856edb4cb8ac/include/http.hrl#L16).
-Include Cowboy's `http.hrl` if you want to use it:
+The third argument given to the handler is of type `cowboy_req:req()`. Use the
+`cowboy_req` module, if you need anything out of the request.
+
+The return value can be a binary string or iolist. So, this also works:
 
 ```erlang
--include_lib("cowboy/include/http.hrl").
+handle(<<"GET">>, [<<"hello">>, Who], _Request) ->
+	[<<"Hello ">>, Who, <<"!">>].
 ```
 
-The return value can be a binary string or iolist. To be more specific
-about the response, use the `response` record. For that to work you
-need to include Axiom's response header file:
+If you want to specify a response status code and/or headers, use a tuple with
+either the status code and body or status code, headers and body, in these
+respective orders.
+
+Examples:
 
 ```erlang
--include_lib("axiom/include/response.hrl").
+{418, <<"<h1>I'm a teapot!</h1>">>}
+```
+or
+```erlang
+{418, [{<<"X-Foo">>, <<"bar">>}], <<"<h1>I'm a teapot!</h1>">>}
 ```
 
-Then, in your handler specify the body, the status and/or some HTTP
-headers:
+As a third option a `cowboy_req:req()` can be returned. In this case, to set the
+response headers and body, use the `cowboy_req:set_resp_header/3` and
+`cowboy_req:set_resp_body/2` functions. To set the status code, use
+`axiom:set_resp_status/2`. These functions return a new `cowboy_req:req()` to be
+used further and to be returned from `YourHandler:handle/3`.
+
+The full spec of `YourHandler:handle/3` is expected to look like this:
 
 ```erlang
-handle('GET', [<<"foo">>], _Request) ->
-	Resp = #response{},
-	Resp2 = axiom:set_header(<<"X-My-Header">>, <<"O HAI!">>, Resp),
-	Resp2#response{body = <<"<h1>It works!</h1>">>}.
+handle(Method, Path, Req) -> Body | Req | {Status, Body} | {Status, Headers, Body}.
+
+  Types:
+    Method = binary(),
+    Path = [PathSegment]
+    PathSegment = binary()
+    Req = cowboy_req:req()
+    Body = iodata()
+    Status = non_neg_integer()
+    Headers = [Header]
+    Header = {binary(), binary()}
 ```
 
-The `response` record defines sane defaults for all the fields, so you
-don't need to specify every one of them:
-
-```erlang
--record(response, {
-		status = 200                                  :: non_neg_integer(),
-		headers = [{'Content-Type', <<"text/html">>}] :: [tuple()],
-		body = <<>>                                   :: iodata()
-}).
-```
+## Request parameters
 
 To get the request parameters out of the request, you can use the two
 handy functions `axiom:params(Req)` and `axiom:param(Name, Req)`.
 The first returns a proplist of all parameters, the second one returns
-the named parameter's value.
-
+the named parameter's value. Keys and values are binary strings.
 
 ## Configuration
 
@@ -81,15 +91,13 @@ are as follows:
 ]
 ```
 
-
 ## Static Files
 
-Static files are served via the `cowboy_http_static` handler. 
-By default, every file in ./public directory and all its subdirectories
-will be made accessible via URL path the same as file's relative path. 
-E.g. the file `./public/index.html` can be accessed via 
-`GET /index.html`. Note: currently if ./public subtree is changed, 
-Axiom needs to be restarted to reflect the change.
+Static files are served via the `cowboy_static` handler. By default, every file
+in the ./public directory and all its subdirectories will be made accessible via
+URL path the same as file's relative path. E.g. the file `./public/about.html`
+can be accessed via `GET /about.html`. **Note**: Currently, if the contents of
+the ./public subtree change, Axiom needs to be restarted to reflect the change.
 
 You can specify a custom directory via the `public` option.
 
@@ -103,10 +111,11 @@ Rule of thumb is to use your machine's number of CPU cores.
 You can redirect requests with `redirect/2`:
 
 ```erlang
-handle('GET', [<<"foo">>], Request) ->
-	axiom:redirect("/bar", Request);
+handle(<<"GET">>, [<<"foo">>], Req) ->
+	Req1 = axiom:redirect("/bar", Req),
+  Req;
 
-handle('GET', [<<"bar">>], Request) ->
+handle(<<"GET">>, [<<"bar">>], Request) ->
 	<<"<h1>Welcome back!</h1>">>.
 ```
 
@@ -124,7 +133,7 @@ in it, create a template, e.g. `my_template.dtl`:
 In your handler, specify the template to be rendered:
 
 ```erlang
-handle('GET', [<<"hello">>], _Request) ->
+handle(<<"GET">>, [<<"hello">>], _Request) ->
 	axiom:dtl(my_template, [{who, "you"}]).
 ```
 
@@ -138,16 +147,6 @@ called.
 To see what else erlydtl can do for you, take a look at
 [its project page](https://code.google.com/p/erlydtl/).
 
-
-## Headers
-
-Header fields can be added with `axiom:add_header/3` to the `response`
-and (for streaming) `http_req` records:
-
-```erlang
--spec set_header(cowboy_http:header(), binary(), #response{}) -> #response{};
-                (cowboy_http:header(), binary(), #http_req{}) -> #http_req{}.
-```
 
 ## Sessions
 
@@ -254,11 +253,11 @@ chunk(Data::iodata(), #http_req{}, Type::binary()) -> {ok, #http_req{}}.
 ### Example
 
 ```erlang
-handle('GET', [<<"stream">>], Req) ->
-	{ok, Req2} = axiom:chunk(<<"Hello">>, Req, <<"text/plain">>),
-	{ok, _} = axiom:chunk(<<" world">>, Req2),
-	{ok, _} = axiom:chunk(<<"!">>, Req2),
-	Req2.
+handle(<<"GET">>, [<<"stream">>], Req) ->
+	{ok, Req1} = axiom:chunk(<<"Hello">>, Req, <<"text/plain">>),
+	{ok, Req2} = axiom:chunk(<<" world">>, Req1),
+	{ok, Req3} = axiom:chunk(<<"!">>, Req2),
+	Req3.
 ```
 
 ## Installation
@@ -268,7 +267,7 @@ To use it in your OTP application, add this to your `rebar.config`:
 ```erlang
 {lib_dirs, ["deps"]}.
 {deps, [
-	{'axiom', "0.0.17", {git, "git://github.com/tsujigiri/axiom.git", {tag, "v0.0.17"}}}
+	{'axiom', "0.1.0", {git, "git://github.com/tsujigiri/axiom.git", {tag, "v0.1.0"}}}
 ]}.
 ```
 
@@ -282,3 +281,4 @@ rebar compile
 ## License
 
 Please take a look at the `LICENSE` file! (tl;dr: it's the MIT License)
+

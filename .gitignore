@@ -1,1 +1,6 @@
+deps/
 doc/
+ebin/
+logs/
+priv/
+.axiom.plt
