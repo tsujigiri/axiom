@@ -112,7 +112,7 @@ You can redirect requests with `redirect/2`:
 
 ```erlang
 handle(<<"GET">>, [<<"foo">>], Req) ->
-	Req1 = axiom:redirect("/bar", Req),
+  Req1 = axiom:redirect("/bar", Req),
   Req;
 
 handle(<<"GET">>, [<<"bar">>], Request) ->
