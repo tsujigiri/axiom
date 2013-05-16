@@ -287,4 +287,4 @@ Please take a look at the `LICENSE` file! (tl;dr: it's the MIT License)
 To express your appreciation you are welcome to push the Flattr button
 ([![Flattr Button](http://api.flattr.com/button/button-compact-static-100x17.png "Flattr This!")](https://flattr.com/thing/1237320/ "Axiom – Erlang web application micro-framework")),
 flip a few bits of internet change into my hat
-([**Ⓑ**](bitcoin:1BWapzSP6rmhhggkwN3xUToQo64j7Rjhvk)) or buy me a beer. :beer:
+(bitcoin:1BWapzSP6rmhhggkwN3xUToQo64j7Rjhvk) or buy me a beer. :beer:
