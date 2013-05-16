@@ -1,4 +1,4 @@
-# Axiom [![Build Status](https://secure.travis-ci.org/tsujigiri/axiom.png?branch=master)](http://travis-ci.org/tsujigiri/axiom)
+# Axiom [![Build Status](https://secure.travis-ci.org/tsujigiri/axiom.png?branch=master)](http://travis-ci.org/tsujigiri/axiom) [![Flattr Button](http://api.flattr.com/button/button-compact-static-100x17.png "Flattr This!")](https://flattr.com/thing/1237320/ "Axiom – Erlang web application micro-framework")
 
 Axiom is a micro-framework for building web applications in Erlang.
 It is inspired by [Sinatra](http://sinatrarb.com) and built on top of
