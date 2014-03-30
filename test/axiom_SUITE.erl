@@ -33,7 +33,7 @@ groups() -> [
 				http_redirect,
 				http_redirect_relative,
 				http_respond_with_iolist,
-				http_stream_data
+				%http_stream_data
 				]},
 		{with_custom_500, [], [http_custom_500]},
 		{static_files, [], [http_hello_static, http_root_to_index]},
