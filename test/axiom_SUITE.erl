@@ -32,7 +32,7 @@ groups() -> [
 				http_render_template,
 				http_redirect,
 				http_redirect_relative,
-				http_respond_with_iolist,
+				http_respond_with_iolist
 				%http_stream_data
 				]},
 		{with_custom_500, [], [http_custom_500]},
