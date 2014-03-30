@@ -203,6 +203,7 @@ http_stream_data(Config) ->
 	{ok, _Ref} = httpc:request(get,
 			{base_url(Config) ++ "stream", []}, [],
 			[{sync, false}, {stream, self}]),
+	timer:sleep(1000),
 	Body = receive_stream(),
 	<<"Hello world!">> = Body.
 
