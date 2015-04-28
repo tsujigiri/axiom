@@ -145,7 +145,7 @@ The templates are compiled into modules when `rebar compile` is
 called.
 
 To see what else erlydtl can do for you, take a look at
-[its project page](https://code.google.com/p/erlydtl/).
+[its project page](https://github.com/erlydtl/erlydtl).
 
 
 ## Sessions
