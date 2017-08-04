@@ -100,8 +100,8 @@ code_change(_OldVsn, State, _Extra) ->
 %% @private
 -spec new_id() -> binary().
 new_id() ->
-	Data = term_to_binary([make_ref(), now(), random:uniform()]),
-	Sha = binary:decode_unsigned(crypto:sha(Data)),
+	Data = term_to_binary([make_ref(), erlang:system_time(), rand:uniform()]),
+	Sha = binary:decode_unsigned(crypto:hash(sha,Data)),
 	list_to_binary(lists:flatten(io_lib:format("~40.16.0b", [Sha]))).
 
 
