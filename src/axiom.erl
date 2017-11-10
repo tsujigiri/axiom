@@ -46,8 +46,17 @@ start(Handler, Options) ->
 	lists:map(fun({K,V}) -> application:set_env(?MODULE, K, V) end, Options),
 	{ok, Host} = application:get_env(?MODULE, host),
 	{ok, Path} = application:get_env(?MODULE, path),
+	Routes = case application:get_env(?MODULE, routes) of
+                     {ok, R1} ->
+                         static_dispatch() ++ 
+                         R1++
+                         [{Path, ?MODULE, [Handler]}];
+                     _ ->
+                         static_dispatch() ++ 
+                         [{Path, ?MODULE, [Handler]}]
+                 end,
 	Dispatch = cowboy_router:compile(
-			[{Host, static_dispatch() ++ [{Path, ?MODULE, [Handler]}]}]),
+			[{Host, Routes}]),
 	ok = case application:get_env(axiom, sessions) of
 		{ok, _} -> application:start(axiom);
 		_ -> ok
