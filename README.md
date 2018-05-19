@@ -1,8 +1,10 @@
-# Axiom [![Build Status](https://secure.travis-ci.org/tsujigiri/axiom.png?branch=master)](http://travis-ci.org/tsujigiri/axiom) [![Flattr Button](http://api.flattr.com/button/button-compact-static-100x17.png "Flattr This!")](https://flattr.com/thing/1237320/ "Axiom – Erlang web application micro-framework")
+# Axiom [![Build Status](https://secure.travis-ci.org/tsujigiri/axiom.png?branch=master)](http://travis-ci.org/tsujigiri/axiom)
 
 Axiom is a micro-framework for building web applications in Erlang.
 It is inspired by [Sinatra](http://sinatrarb.com) and built on top of
 [Cowboy](https://github.com/extend/cowboy).
+
+## [Maintainer wanted!](https://github.com/tsujigiri/axiom/issues/28)
 
 ## Getting Started
 
@@ -281,10 +283,3 @@ rebar compile
 ## License
 
 Please take a look at the `LICENSE` file! (tl;dr: it's the MIT License)
-
-## Donate
-
-To express your appreciation you are welcome to
-[![Flattr Button](http://api.flattr.com/button/button-compact-static-100x17.png "Flattr This!")](https://flattr.com/thing/1237320/ "Axiom – Erlang web application micro-framework"),
-flip a few bits of internet change into my hat
-(bitcoin:1BWapzSP6rmhhggkwN3xUToQo64j7Rjhvk) or buy me a beer. :beer:
