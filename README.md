@@ -4,8 +4,6 @@ Axiom is a micro-framework for building web applications in Erlang.
 It is inspired by [Sinatra](http://sinatrarb.com) and built on top of
 [Cowboy](https://github.com/extend/cowboy).
 
-## [Maintainer wanted!](https://github.com/tsujigiri/axiom/issues/28)
-
 ## Getting Started
 
 Axiom is built to make creating web applications fast and easy.
