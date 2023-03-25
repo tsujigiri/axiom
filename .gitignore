@@ -4,3 +4,5 @@ ebin/
 logs/
 priv/
 .axiom.plt
+test/*.beam
+.rebar/
